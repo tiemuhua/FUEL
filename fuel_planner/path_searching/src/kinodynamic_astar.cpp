@@ -189,8 +189,7 @@ namespace fast_planner {
 
                     // Compare nodes expanded from the same parent
                     bool prune = false;
-                    for (int j = 0; j < tmp_expand_nodes.size(); ++j) {
-                        PathNodePtr expand_node = tmp_expand_nodes[j];
+                    for (auto expand_node : tmp_expand_nodes) {
                         if ((pro_id - expand_node->index).norm() == 0 &&
                             ((!dynamic) || pro_t_id == expand_node->time_idx)) {
                             prune = true;
@@ -252,7 +251,6 @@ namespace fast_planner {
                         }
                     }
                 }
-            // init_search = false;
         }
 
         cout << "open set empty, no path!" << endl;
