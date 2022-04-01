@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(active_perception)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS "-std=c++14")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall")
 
 find_package(PCL 1.7 REQUIRED)
 find_package(Eigen3 REQUIRED)

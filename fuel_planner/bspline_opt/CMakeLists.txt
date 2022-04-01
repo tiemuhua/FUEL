@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(bspline_opt)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS "-std=c++14")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall")
+
+set(nlopt_DIR "/usr/local/lib/cmake/nlopt/")
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.7 REQUIRED)
@@ -39,5 +41,5 @@ add_library( bspline_opt
     )
 target_link_libraries( bspline_opt
     ${catkin_LIBRARIES} 
-    # /usr/local/lib/libnlopt.so
+    /usr/local/lib/libnlopt.so
     )  
