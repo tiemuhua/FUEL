@@ -134,10 +134,6 @@ namespace fast_planner {
             return false;
         }
 
-        Eigen::Vector3d init_pos = start_pt;
-        Eigen::Vector3d init_vel = start_vel;
-        Eigen::Vector3d init_acc = start_acc;
-
         // Kinodynamic path searching
 
         auto t1 = ros::Time::now();

@@ -162,8 +162,8 @@ namespace fast_planner {
 
         void reset();
 
-        int search(Eigen::Vector3d start_pt, Eigen::Vector3d start_vel, Eigen::Vector3d start_acc,
-                   Eigen::Vector3d end_pt, Eigen::Vector3d end_vel, bool init, bool dynamic = false,
+        int search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& start_v, const Eigen::Vector3d& start_a,
+                   const Eigen::Vector3d& end_pt, const Eigen::Vector3d& end_v, bool init, bool dynamic = false,
                    double time_start = -1.0);
 
         void setEnvironment(const EDTEnvironment::Ptr &env);

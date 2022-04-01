@@ -12,8 +12,8 @@ namespace fast_planner {
         }
     }
 
-    int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, Eigen::Vector3d start_a,
-                                 Eigen::Vector3d end_pt, Eigen::Vector3d end_v, bool init, bool dynamic,
+    int KinodynamicAstar::search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& start_v, const Eigen::Vector3d& start_a,
+                                 const Eigen::Vector3d& end_pt, const Eigen::Vector3d& end_v, const bool init, const bool dynamic,
                                  double time_start) {
         start_vel_ = start_v;
         start_acc_ = start_a;
