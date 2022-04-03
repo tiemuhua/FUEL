@@ -24,7 +24,7 @@ public:
   void setKnot(const Eigen::VectorXd& knot);
   Eigen::VectorXd getKnot();
   Eigen::MatrixXd getControlPoint();
-  double getKnotSpan();
+  double getKnotSpan() const;
   void getTimeSpan(double& um, double& um_p);
 
   // compute position / derivative

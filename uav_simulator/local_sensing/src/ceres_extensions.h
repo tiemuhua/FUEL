@@ -119,8 +119,8 @@ inline void EigenQuaternionToRotation(const T q[4],
   CHECK_NE(normalizer, T(0));
   normalizer = T(1) / normalizer;
 
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
+  for (size_t i = 0; i < 3; ++i) {
+    for (size_t j = 0; j < 3; ++j) {
       R(i, j) *= normalizer;
     }
   }

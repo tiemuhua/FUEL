@@ -136,7 +136,7 @@ nav_msgs::Path eight() {
   geometry_msgs::PoseStamped pt;
   pt.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
 
-  for (int i = 0; i < 1; ++i) {
+  for (size_t i = 0; i < 1; ++i) {
     // First loop
     pt.pose.position.x = r + offset_x;
     pt.pose.position.y = -r + offset_y;

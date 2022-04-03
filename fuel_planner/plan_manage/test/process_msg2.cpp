@@ -46,7 +46,7 @@ void drawLines(const vector<Eigen::Vector3d>& list1, const vector<Eigen::Vector3
   mk.scale.x = line_width;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list1.size()); ++i) {
+  for (size_t i = 0; i < int(list1.size()); ++i) {
     pt.x = list1[i](0);
     pt.y = list1[i](1);
     pt.z = list1[i](2);
@@ -89,7 +89,7 @@ void drawSpheres(const vector<Eigen::Vector3d>& points, const double& resolution
   mk.scale.z = resolution;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(points.size()); i++) {
+  for (size_t i = 0; i < int(points.size()); i++) {
     pt.x = points[i](0);
     pt.y = points[i](1);
     pt.z = points[i](2);
@@ -120,7 +120,7 @@ void calcNextYaw(const double& last_yaw, double& yaw) {
 }
 
 void fovCallback(const visualization_msgs::MarkerConstPtr& msg) {
-  if (msg->points.size() == 0) return;
+  if (msg->points.empty()) return;
 
   // Calculate the position and yaw
   Eigen::Vector3d p0(msg->points[0].x, msg->points[0].y, msg->points[0].z);  // Camera origin
@@ -140,7 +140,7 @@ void fovCallback(const visualization_msgs::MarkerConstPtr& msg) {
   Eigen::Matrix3d Rwb;
   Rwb << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
   vector<Eigen::Vector3d> l1, l2;
-  for (int i = 0; i < cam1.size(); ++i) {
+  for (size_t i = 0; i < cam1.size(); ++i) {
     l1.push_back(Rwb * cam1[i] + p0);
     l2.push_back(Rwb * cam2[i] + p0);
   }
@@ -148,7 +148,7 @@ void fovCallback(const visualization_msgs::MarkerConstPtr& msg) {
 }
 
 void cmdTrajCallback(const visualization_msgs::MarkerConstPtr& msg) {
-  if (msg->points.size() == 0) return;
+  if (msg->points.empty()) return;
 
   // Video
   // visualization_msgs::Marker mk;
@@ -248,7 +248,7 @@ void cmdTrajCallback(const visualization_msgs::MarkerConstPtr& msg) {
 }
 
 void planTrajCallback(const visualization_msgs::MarkerConstPtr& msg) {
-  if (msg->points.size() == 0) return;
+  if (msg->points.empty()) return;
 
   // Offset by difference with current FOV
   visualization_msgs::Marker mk = *msg;
@@ -277,7 +277,7 @@ void planTrajCallback(const visualization_msgs::MarkerConstPtr& msg) {
   Eigen::Vector3d p_end(p_msg_end.x, p_msg_end.y, p_msg_end.z);
 
   vector<Eigen::Vector3d> l1, l2;
-  for (int i = 0; i < cam1.size(); ++i) {
+  for (size_t i = 0; i < cam1.size(); ++i) {
     l1.push_back(Rwb * cam1[i] + p_end);
     l2.push_back(Rwb * cam2[i] + p_end);
   }
@@ -285,7 +285,7 @@ void planTrajCallback(const visualization_msgs::MarkerConstPtr& msg) {
 }
 
 void viewCallback(const visualization_msgs::MarkerConstPtr& msg) {
-  if (msg->ns == "global_tour" && msg->points.size() == 0) {
+  if (msg->ns == "global_tour" && msg->points.empty()) {
     visualization_msgs::Marker mk = *msg;
     mk.ns = "plan_traj";
     marker1_pub_.publish(mk);
@@ -294,7 +294,7 @@ void viewCallback(const visualization_msgs::MarkerConstPtr& msg) {
     return;
   }
 
-  if (msg->ns != "refined_view" || msg->points.size() == 0) return;
+  if (msg->ns != "refined_view" || msg->points.empty()) return;
   view_mk_ = *msg;
   view_mk_.points.erase(view_mk_.points.begin() + 16, view_mk_.points.end());
 }

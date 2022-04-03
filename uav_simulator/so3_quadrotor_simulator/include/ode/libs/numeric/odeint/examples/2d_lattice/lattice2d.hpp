@@ -36,7 +36,7 @@ struct lattice2d {
     for (i = 0; i < N; ++i) {
       const int i_l = (i - 1 + N) % N;
       const int i_r = (i + 1) % N;
-      for (int j = 0; j < N; ++j) {
+      for (size_t j = 0; j < N; ++j) {
         const int j_l = (j - 1 + N) % N;
         const int j_r = (j + 1) % N;
         dpdt[i][j] = -m_omega[i][j] * pow<Kappa - 1>(q[i][j]) -
@@ -57,7 +57,7 @@ struct lattice2d {
     for (i = 0; i < N; ++i) {
       const int i_l = (i - 1 + N) % N;
       const int i_r = (i + 1) % N;
-      for (int j = 0; j < N; ++j) {
+      for (size_t j = 0; j < N; ++j) {
         const int j_l = (j - 1 + N) % N;
         const int j_r = (j + 1) % N;
         energy += p[i][j] * p[i][j] / 2.0 + m_omega[i][j] * pow<Kappa>(q[i][j]) / Kappa +
@@ -79,7 +79,7 @@ struct lattice2d {
     for (i = 0; i < N; ++i) {
       const int i_l = (i - 1 + N) % N;
       const int i_r = (i + 1) % N;
-      for (int j = 0; j < N; ++j) {
+      for (size_t j = 0; j < N; ++j) {
         const int j_l = (j - 1 + N) % N;
         const int j_r = (j + 1) % N;
         energy[i][j] = p[i][j] * p[i][j] / 2.0 + m_omega[i][j] * pow<Kappa>(q[i][j]) / Kappa +
@@ -93,7 +93,7 @@ struct lattice2d {
     // rescale
     e = 1.0 / e;
     for (i = 0; i < N; ++i)
-      for (int j = 0; j < N; ++j)
+      for (size_t j = 0; j < N; ++j)
         energy[i][j] *= e;
     return 1.0 / e;
   }
@@ -108,7 +108,7 @@ struct lattice2d {
     }
 
     m_omega.resize(dim);
-    for (int i = 0; i < dim; ++i) {
+    for (size_t i = 0; i < dim; ++i) {
       m_omega[i].resize(dim);
       for (size_t j = 0; j < dim; ++j) {
         if (!in.good()) {

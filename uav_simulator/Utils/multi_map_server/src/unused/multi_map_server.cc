@@ -30,7 +30,7 @@ vector<geometry_msgs::Pose> maps_origin;
 void map2d_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
 {
   // Update msg and publish
-  if (grids2d.maps.size() == 0)
+  if (grids2d.maps.empty())
   {
     // Init msg
     grids2d.maps.push_back(*msg);

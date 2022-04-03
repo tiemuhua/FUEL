@@ -77,7 +77,7 @@ public:
 
   void Replace(nav_msgs::OccupancyGrid m) {
     // Check data
-    if (m.data.size() == 0) return;
+    if (m.data.empty()) return;
     isBinningSet = true;
     // Binning, conservative, take maximum
     if (binning > 1) {
@@ -86,8 +86,8 @@ public:
       m.info.height /= binning;
       m.info.resolution *= binning;
       vector<signed char> data(m.info.width * m.info.height);
-      for (int i = 0; i < m.info.height; i++) {
-        for (int j = 0; j < m.info.width; j++) {
+      for (size_t i = 0; i < m.info.height; i++) {
+        for (size_t j = 0; j < m.info.width; j++) {
           int val = -0xff;
           for (int _i = 0; _i < binning; _i++) {
             for (int _j = 0; _j < binning; _j++) {
@@ -108,7 +108,7 @@ public:
   // Merge submap
   void Update(nav_msgs::OccupancyGrid m) {
     // Check data
-    if (m.data.size() == 0) return;
+    if (m.data.empty()) return;
     isBinningSet = true;
     // Binning, conservative, take maximum
     if (binning > 1) {
@@ -117,8 +117,8 @@ public:
       m.info.height /= binning;
       m.info.resolution *= binning;
       vector<signed char> data(m.info.width * m.info.height);
-      for (int i = 0; i < m.info.height; i++) {
-        for (int j = 0; j < m.info.width; j++) {
+      for (size_t i = 0; i < m.info.height; i++) {
+        for (size_t j = 0; j < m.info.width; j++) {
           int val = -0xff;
           for (int _i = 0; _i < binning; _i++) {
             for (int _j = 0; _j < binning; _j++) {

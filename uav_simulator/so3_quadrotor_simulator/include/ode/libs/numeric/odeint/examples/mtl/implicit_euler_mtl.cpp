@@ -92,7 +92,7 @@ struct system2_mtl4 {
   void operator()(const vec_mtl4& x, vec_mtl4& dxdt, double t) {
     int size = mtl::size(x);
 
-    for (int i = 0; i < size / 5; i += 5) {
+    for (size_t i = 0; i < size / 5; i += 5) {
 
       dxdt[i] = -0.5 * x[i];
       dxdt[i + 1] = +25 * x[i + 1] * x[i + 2] - 740 * x[i + 3] * x[i + 3] + 4.2e-2 * x[i];
@@ -108,7 +108,7 @@ struct jacobi2_mtl4 {
     int size = mtl::size(x);
     mtl::matrix::inserter<mat_mtl4> ins(J);
 
-    for (int i = 0; i < size / 5; i += 5) {
+    for (size_t i = 0; i < size / 5; i += 5) {
 
       ins[i][i] = -0.5;
       ins[i + 1][i + 1] = 25 * x[i + 2];
@@ -132,7 +132,7 @@ struct system2_ublas {
 
   void operator()(const vec_ublas& x, vec_ublas& dxdt, double t) {
     int size = x.size();
-    for (int i = 0; i < size / 5; i += 5) {
+    for (size_t i = 0; i < size / 5; i += 5) {
 
       dxdt[i] = -4.2e-2 * x[i];
       dxdt[i + 1] = +25 * x[i + 1] * x[i + 2] - 740 * x[i + 3] * x[i + 3] + 4.2e-2 * x[i];
@@ -147,7 +147,7 @@ struct jacobi2_ublas {
   void operator()(const vec_ublas& x, mat_ublas& J, const double& t) {
     int size = x.size();
 
-    for (int i = 0; i < size / 5; i += 5) {
+    for (size_t i = 0; i < size / 5; i += 5) {
 
       J(i, i) = -4.2e-2;
       J(i + 1, i + 1) = 25 * x[i + 2];

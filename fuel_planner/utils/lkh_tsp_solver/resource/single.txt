@@ -1,17 +1,14 @@
 NAME : single.1031.tour
 COMMENT : Length = 1031
-COMMENT : Found by LKH [Keld Helsgaun] Fri Apr  1 13:22:55 2022
+COMMENT : Found by LKH [Keld Helsgaun] Sun Apr  3 23:23:58 2022
 TYPE : TOUR
-DIMENSION : 9
+DIMENSION : 6
 TOUR_SECTION
 1
-2
-4
 3
-7
-5
-9
-8
 6
+2
+5
+4
 -1
 EOF

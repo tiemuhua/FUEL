@@ -124,7 +124,7 @@ void VisibilityUtil::findVisibPairs(const vector<Eigen::Vector3d>& pts, vector<V
   int know_num = 0;
   pairs.clear();
   int cur_j, prev_j = -1;
-  for (int i = 0; i < pts.size() - visible_num_; ++i) {
+  for (size_t i = 0; i < pts.size() - visible_num_; ++i) {
     Eigen::Vector3d qi = pts[i];
     Eigen::Vector3d qj, qb;
     // find the first qj not seen by qi

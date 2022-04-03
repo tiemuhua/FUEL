@@ -95,7 +95,7 @@ void LinearObjModel::update(double dt) {
 
   /* ---------- use acc as input ---------- */
   // vel_ = v0 + acc_ * dt;
-  // for (int i = 0; i < 3; ++i)
+  // for (size_t i = 0; i < 3; ++i)
   // {
   //   if (vel_(i) > 0) vel_(i) = std::max(limit_v_(0), std::min(vel_(i),
   //   limit_v_(1)));
@@ -104,7 +104,7 @@ void LinearObjModel::update(double dt) {
   // }
 
   // pos_ = p0 + v0 * dt + 0.5 * acc_ * pow(dt, 2);
-  // for (int i = 0; i < 2; ++i)
+  // for (size_t i = 0; i < 2; ++i)
   // {
   //   pos_(i) = std::min(pos_(i), bound_(i));
   //   pos_(i) = std::max(pos_(i), -bound_(i));
@@ -114,7 +114,7 @@ void LinearObjModel::update(double dt) {
 
   /* ---------- use vel as input ---------- */
   pos_ = p0 + v0 * dt;
-  for (int i = 0; i < 2; ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     pos_(i) = std::min(pos_(i), bound_(i));
     pos_(i) = std::max(pos_(i), -bound_(i));
   }
@@ -177,7 +177,7 @@ bool LinearObjModel::collide(LinearObjModel& obj1, LinearObjModel& obj2) {
     tol[1] = 0.5 * (scale1(1) + scale2(1)) - fabs(pos1(1) - pos2(1));
     tol[2] = 0.5 * (scale1(2) + scale2(2)) - fabs(pos1(2) - pos2(2));
 
-    for (int i = 0; i < 3; ++i) {
+    for (size_t i = 0; i < 3; ++i) {
       if (tol[i] < tol[(i + 1) % 3] && tol[i] < tol[(i + 2) % 3]) {
         vel1(i) = -vel1(i);
         vel2(i) = -vel2(i);

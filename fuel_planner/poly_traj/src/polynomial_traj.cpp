@@ -55,7 +55,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(seg_num * 6, seg_num * 6);
   for (int k = 0; k < seg_num; k++) {
     Ab = Eigen::MatrixXd::Zero(6, 6);
-    for (int i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 3; i++) {
       Ab(2 * i, i) = Factorial(i);
       for (int j = i; j < 6; j++)
         Ab(2 * i + 1, j) = Factorial(j) / Factorial(j - i) * pow(times(k), j - i);
@@ -149,7 +149,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   Pz = (A.inverse() * Ct) * Dz1;
 
   poly_traj.reset();
-  for (int i = 0; i < seg_num; i++) {
+  for (size_t i = 0; i < seg_num; i++) {
     Polynomial poly(Px.segment<6>(i * 6), Py.segment<6>(i * 6), Pz.segment<6>(i * 6), times[i]);
     poly_traj.addSegment(poly);
     // poly_coeff.block(i, 0, 1, 6) = ;
@@ -157,10 +157,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
     // poly_coeff.block(i, 12, 1, 6) = Pz.segment(i * 6, 6).transpose();
   }
 
-  // for (int i = 0; i < poly_coeff.rows(); ++i)
+  // for (size_t i = 0; i < poly_coeff.rows(); ++i)
   // {
   //   vector<double> cx(6), cy(6), cz(6);
-  //   for (int j = 0; j < 6; ++j)
+  //   for (size_t j = 0; j < 6; ++j)
   //   {
   //     cx[j] = poly_coeff(i, j), cy[j] = poly_coeff(i, j + 6), cz[j] = poly_coeff(i, j + 12);
   //   }
@@ -185,7 +185,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 //   // get scale vector
 //   int max_id = -1;
 //   double max_dist = -1.0;
-//   for (int i = 0; i < 3; ++i)
+//   for (size_t i = 0; i < 3; ++i)
 //   {
 //     if (fabs(disp(i)) > max_dist)
 //     {
@@ -197,7 +197,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   PolynomialTraj poly_traj;
 //   vector<double> cx(6), cy(6), cz(6), zero(6);
-//   for (int i = 0; i < 6; ++i)
+//   for (size_t i = 0; i < 6; ++i)
 //     zero[i] = 0.0;
 
 //   Eigen::Vector3d p0 = start;
@@ -419,7 +419,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 //   // 3 segments of traj
 //   PolynomialTraj poly_traj;
 //   vector<double> cx(6), cy(6), cz(6), zero(6);
-//   for (int i = 0; i < 6; ++i)
+//   for (size_t i = 0; i < 6; ++i)
 //     zero[i] = 0.0;
 
 //   // head segment

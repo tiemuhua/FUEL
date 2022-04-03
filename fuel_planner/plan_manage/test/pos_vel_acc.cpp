@@ -27,7 +27,7 @@ void displaySphereList(vector<Eigen::Vector3d> list, double resolution, Eigen::V
   mk.color.r = color(0), mk.color.g = color(1), mk.color.b = color(2), mk.color.a = color(3);
   mk.scale.x = resolution, mk.scale.y = resolution, mk.scale.z = resolution;
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list.size()); i++) {
+  for (size_t i = 0; i < int(list.size()); i++) {
     pt.x = list[i](0), pt.y = list[i](1), pt.z = list[i](2);
     mk.points.push_back(pt);
   }
@@ -58,7 +58,7 @@ void drawBspline(NonUniformBspline bspline, double size, Eigen::Vector4d color, 
   Eigen::MatrixXd ctrl_pts = bspline.getControlPoint();
 
   vector<Eigen::Vector3d> ctp;
-  for (int i = 0; i < int(ctrl_pts.rows()); ++i) {
+  for (size_t i = 0; i < int(ctrl_pts.rows()); ++i) {
     Eigen::Vector3d pt = ctrl_pts.row(i).transpose();
     ctp.push_back(pt);
   }

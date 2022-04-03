@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   node.param("obj_generator/interval", _interval, 2.5);
 
   obj_pub = node.advertise<visualization_msgs::Marker>("/dynamic/obj", 10);
-  for (int i = 0; i < obj_num; ++i) {
+  for (size_t i = 0; i < obj_num; ++i) {
     ros::Publisher pose_pub =
         node.advertise<geometry_msgs::PoseStamped>("/dynamic/pose_" + to_string(i), 10);
     pose_pubs.push_back(pose_pub);
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
   rand_yaw_dot = uniform_real_distribution<double>(-_yaw_dot, _yaw_dot);
 
   /* ---------- give initial value of each obj ---------- */
-  for (int i = 0; i < obj_num; ++i) {
+  for (size_t i = 0; i < obj_num; ++i) {
     LinearObjModel model;
     Eigen::Vector3d pos(rand_pos(eng), rand_pos(eng), rand_h(eng));
     Eigen::Vector3d vel(rand_vel(eng), rand_vel(eng), 0.0);
@@ -114,7 +114,7 @@ void updateCallback(const ros::TimerEvent& e) {
   /* ---------- change input ---------- */
   double dtc = (time_now - time_change).toSec();
   if (dtc > _interval) {
-    for (int i = 0; i < obj_num; ++i) {
+    for (size_t i = 0; i < obj_num; ++i) {
       /* ---------- use acc input ---------- */
       // double r, t, z;
       // r = rand_acc_r(eng);
@@ -139,13 +139,13 @@ void updateCallback(const ros::TimerEvent& e) {
   /* ---------- update obj state ---------- */
   double dt = (time_now - time_update).toSec();
   time_update = time_now;
-  for (int i = 0; i < obj_num; ++i) {
+  for (size_t i = 0; i < obj_num; ++i) {
     obj_models[i].update(dt);
     visualizeObj(i);
   }
 
   /* ---------- collision ---------- */
-  for (int i = 0; i < obj_num; ++i)
+  for (size_t i = 0; i < obj_num; ++i)
     for (int j = i + 1; j < obj_num; ++j) {
       bool collision = LinearObjModel::collide(obj_models[i], obj_models[j]);
       if (collision) {

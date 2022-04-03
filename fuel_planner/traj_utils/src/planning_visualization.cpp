@@ -63,7 +63,7 @@ void PlanningVisualization::fillBasicInfo(visualization_msgs::Marker& mk, const 
 void PlanningVisualization::fillGeometryInfo(visualization_msgs::Marker& mk,
                                              const vector<Eigen::Vector3d>& list) {
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list.size()); i++) {
+  for (size_t i = 0; i < int(list.size()); i++) {
     pt.x = list[i](0);
     pt.y = list[i](1);
     pt.z = list[i](2);
@@ -75,7 +75,7 @@ void PlanningVisualization::fillGeometryInfo(visualization_msgs::Marker& mk,
                                              const vector<Eigen::Vector3d>& list1,
                                              const vector<Eigen::Vector3d>& list2) {
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list1.size()); ++i) {
+  for (size_t i = 0; i < int(list1.size()); ++i) {
     pt.x = list1[i](0);
     pt.y = list1[i](1);
     pt.z = list1[i](2);
@@ -153,7 +153,7 @@ void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list1,
   mk.action = visualization_msgs::Marker::DELETE;
   pubs_[pub_id].publish(mk);
 
-  if (list1.size() == 0) return;
+  if (list1.empty()) return;
 
   // pub new marker
   fillGeometryInfo(mk, list1, list2);
@@ -177,7 +177,7 @@ void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list, const
 
   // split the single list into two
   vector<Eigen::Vector3d> list1, list2;
-  for (int i = 0; i < list.size() - 1; ++i) {
+  for (size_t i = 0; i < list.size() - 1; ++i) {
     list1.push_back(list[i]);
     list2.push_back(list[i + 1]);
   }
@@ -215,7 +215,7 @@ void PlanningVisualization::displaySphereList(const vector<Eigen::Vector3d>& lis
   mk.scale.z = resolution;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list.size()); i++) {
+  for (size_t i = 0; i < int(list.size()); i++) {
     pt.x = list[i](0);
     pt.y = list[i](1);
     pt.z = list[i](2);
@@ -251,7 +251,7 @@ void PlanningVisualization::displayCubeList(const vector<Eigen::Vector3d>& list,
   mk.scale.z = resolution;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list.size()); i++) {
+  for (size_t i = 0; i < int(list.size()); i++) {
     pt.x = list[i](0);
     pt.y = list[i](1);
     pt.z = list[i](2);
@@ -286,7 +286,7 @@ void PlanningVisualization::displayLineList(const vector<Eigen::Vector3d>& list1
   mk.scale.x = line_width;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list1.size()); ++i) {
+  for (size_t i = 0; i < int(list1.size()); ++i) {
     pt.x = list1[i](0);
     pt.y = list1[i](1);
     pt.z = list1[i](2);
@@ -305,13 +305,13 @@ void PlanningVisualization::displayLineList(const vector<Eigen::Vector3d>& list1
 void PlanningVisualization::drawBsplinesPhase1(vector<NonUniformBspline>& bsplines, double size) {
   vector<Eigen::Vector3d> empty;
 
-  for (int i = 0; i < last_bspline_phase1_num_; ++i) {
+  for (size_t i = 0; i < last_bspline_phase1_num_; ++i) {
     displaySphereList(empty, size, Eigen::Vector4d(1, 0, 0, 1), BSPLINE + i % 100);
     displaySphereList(empty, size, Eigen::Vector4d(1, 0, 0, 1), BSPLINE_CTRL_PT + i % 100);
   }
   last_bspline_phase1_num_ = bsplines.size();
 
-  for (int i = 0; i < bsplines.size(); ++i) {
+  for (size_t i = 0; i < bsplines.size(); ++i) {
     drawBspline(bsplines[i], size, getColor(double(i) / bsplines.size(), 0.2), false, 2 * size,
                 getColor(double(i) / bsplines.size()), i);
   }
@@ -320,7 +320,7 @@ void PlanningVisualization::drawBsplinesPhase1(vector<NonUniformBspline>& bsplin
 void PlanningVisualization::drawBsplinesPhase2(vector<NonUniformBspline>& bsplines, double size) {
   vector<Eigen::Vector3d> empty;
 
-  for (int i = 0; i < last_bspline_phase2_num_; ++i) {
+  for (size_t i = 0; i < last_bspline_phase2_num_; ++i) {
     drawSpheres(empty, size, Eigen::Vector4d(1, 0, 0, 1), "B-Spline", i, 0);
     drawSpheres(empty, size, Eigen::Vector4d(1, 0, 0, 1), "B-Spline", i + 50, 0);
     // displaySphereList(empty, size, Eigen::Vector4d(1, 0, 0, 1), BSPLINE + (50 + i) % 100);
@@ -328,7 +328,7 @@ void PlanningVisualization::drawBsplinesPhase2(vector<NonUniformBspline>& bsplin
   }
   last_bspline_phase2_num_ = bsplines.size();
 
-  for (int i = 0; i < bsplines.size(); ++i) {
+  for (size_t i = 0; i < bsplines.size(); ++i) {
     drawBspline(bsplines[i], size, getColor(double(i) / bsplines.size(), 0.6), false, 1.5 * size,
                 getColor(double(i) / bsplines.size()), i);
   }
@@ -354,7 +354,7 @@ void PlanningVisualization::drawBspline(NonUniformBspline& bspline, double size,
   if (show_ctrl_pts) {
     Eigen::MatrixXd ctrl_pts = bspline.getControlPoint();
     vector<Eigen::Vector3d> ctp;
-    for (int i = 0; i < int(ctrl_pts.rows()); ++i) {
+    for (size_t i = 0; i < int(ctrl_pts.rows()); ++i) {
       Eigen::Vector3d pt = ctrl_pts.row(i).transpose();
       ctp.push_back(pt);
     }
@@ -400,7 +400,7 @@ void PlanningVisualization::drawTopoPathsPhase2(vector<vector<Eigen::Vector3d>>&
                                                 double line_width) {
   // clear drawn paths
   Eigen::Vector4d color1(1, 1, 1, 1);
-  for (int i = 0; i < last_topo_path1_num_; ++i) {
+  for (size_t i = 0; i < last_topo_path1_num_; ++i) {
     vector<Eigen::Vector3d> empty;
     displayLineList(empty, empty, line_width, color1, SELECT_PATH + i % 100, 1);
     displaySphereList(empty, line_width, color1, PATH + i % 100, 1);
@@ -409,10 +409,10 @@ void PlanningVisualization::drawTopoPathsPhase2(vector<vector<Eigen::Vector3d>>&
   last_topo_path1_num_ = paths.size();
 
   // draw new paths
-  for (int i = 0; i < paths.size(); ++i) {
+  for (size_t i = 0; i < paths.size(); ++i) {
     vector<Eigen::Vector3d> edge_pt1, edge_pt2;
 
-    for (int j = 0; j < paths[i].size() - 1; ++j) {
+    for (size_t j = 0; j < paths[i].size() - 1; ++j) {
       edge_pt1.push_back(paths[i][j]);
       edge_pt2.push_back(paths[i][j + 1]);
     }
@@ -425,7 +425,7 @@ void PlanningVisualization::drawTopoPathsPhase2(vector<vector<Eigen::Vector3d>>&
 void PlanningVisualization::drawTopoPathsPhase1(vector<vector<Eigen::Vector3d>>& paths, double size) {
   // clear drawn paths
   Eigen::Vector4d color1(1, 1, 1, 1);
-  for (int i = 0; i < last_topo_path2_num_; ++i) {
+  for (size_t i = 0; i < last_topo_path2_num_; ++i) {
     vector<Eigen::Vector3d> empty;
     displayLineList(empty, empty, size, color1, FILTERED_PATH + i % 100, 1);
   }
@@ -433,10 +433,10 @@ void PlanningVisualization::drawTopoPathsPhase1(vector<vector<Eigen::Vector3d>>&
   last_topo_path2_num_ = paths.size();
 
   // draw new paths
-  for (int i = 0; i < paths.size(); ++i) {
+  for (size_t i = 0; i < paths.size(); ++i) {
     vector<Eigen::Vector3d> edge_pt1, edge_pt2;
 
-    for (int j = 0; j < paths[i].size() - 1; ++j) {
+    for (size_t j = 0; j < paths[i].size() - 1; ++j) {
       edge_pt1.push_back(paths[i][j]);
       edge_pt2.push_back(paths[i][j + 1]);
     }
@@ -471,7 +471,7 @@ void PlanningVisualization::drawPrediction(ObjPrediction pred, double resolution
   const double range = 5.6;
 
   vector<Eigen::Vector3d> traj;
-  for (int i = 0; i < pred->size(); i++) {
+  for (size_t i = 0; i < pred->size(); i++) {
     PolynomialPrediction poly = pred->at(i);
     if (!poly.valid()) continue;
 
@@ -491,7 +491,7 @@ void PlanningVisualization::drawVisibConstraint(const Eigen::MatrixXd& ctrl_pts,
   vector<Eigen::Vector3d> pts1, pts2, pts3, pts4;
   int n = ctrl_pts.rows() - visible_num;
 
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     Eigen::Vector3d qb = block_pts[i];
 
     if (fabs(qb[2] + 10086) > 1e-3) {
@@ -567,7 +567,7 @@ void PlanningVisualization::drawViewConstraint(const ViewConstraint& vc) {
 }
 
 void PlanningVisualization::drawFrontier(const vector<vector<Eigen::Vector3d>>& frontiers) {
-  for (int i = 0; i < frontiers.size(); ++i) {
+  for (size_t i = 0; i < frontiers.size(); ++i) {
     // displayCubeList(frontiers[i], 0.1, getColor(double(i) / frontiers.size(),
     // 0.4), i, 4);
     drawCubes(frontiers[i], 0.1, getColor(double(i) / frontiers.size(), 0.8), "frontier", i, 4);
@@ -602,7 +602,7 @@ void PlanningVisualization::drawYawPath(NonUniformBspline& pos, const vector<dou
                                         const double& dt) {
   vector<Eigen::Vector3d> pts1, pts2;
 
-  for (int i = 0; i < yaw.size(); ++i) {
+  for (size_t i = 0; i < yaw.size(); ++i) {
     Eigen::Vector3d pc = pos.evaluateDeBoorT(i * dt);
     pc[2] += 0.3;
     Eigen::Vector3d dir(cos(yaw[i]), sin(yaw[i]), 0);

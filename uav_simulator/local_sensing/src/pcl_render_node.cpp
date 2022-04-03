@@ -188,7 +188,7 @@ void rcvGlobalPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
   pcl::PointXYZ pt_in;
   // transform map to point cloud format
   pcl::fromROSMsg(pointcloud_map, cloudIn);
-  for (int i = 0; i < int(cloudIn.points.size()); i++)
+  for (size_t i = 0; i < int(cloudIn.points.size()); i++)
   {
     pt_in = cloudIn.points[i];
     cloud_data.push_back(pt_in.x);
@@ -212,9 +212,9 @@ void rcvLocalPointCloudCallBack(const sensor_msgs::PointCloud2& pointcloud_map)
   // transform map to point cloud format
   pcl::fromROSMsg(pointcloud_map, cloudIn);
 
-  if (cloudIn.points.size() == 0)
+  if (cloudIn.points.empty())
     return;
-  for (int i = 0; i < int(cloudIn.points.size()); i++)
+  for (size_t i = 0; i < int(cloudIn.points.size()); i++)
   {
     pt_in = cloudIn.points[i];
     Eigen::Vector3d pose_pt(pt_in.x, pt_in.y, pt_in.z);
@@ -287,8 +287,8 @@ void render_currentpose()
 
   double pose[4 * 4];
 
-  for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
+  for (size_t i = 0; i < 4; i++)
+    for (size_t j = 0; j < 4; j++)
     {
       // pose[j + 4 * i] = cam_pose(i, j);
       pose[j + 4 * i] = cam_pose(i, j);
@@ -300,8 +300,8 @@ void render_currentpose()
   depth_mat = cv::Mat::zeros(height, width, CV_32FC1);
   double min = 0.5;
   double max = 1.0f;
-  for (int i = 0; i < height; i++)
-    for (int j = 0; j < width; j++)
+  for (size_t i = 0; i < height; i++)
+    for (size_t j = 0; j < width; j++)
     {
       float depth = (float)depth_hostptr[i * width + j] / 1000.0f;
       depth = depth < 500.0f ? depth : 0;

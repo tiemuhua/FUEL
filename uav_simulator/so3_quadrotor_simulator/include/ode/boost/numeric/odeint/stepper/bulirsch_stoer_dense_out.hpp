@@ -432,7 +432,7 @@ private:
      */
 
     // calculate finite difference approximations to derivatives at the midpoint
-    for (int j = 0; j <= k; j++) {
+    for (size_t j = 0; j <= k; j++) {
       /* not working with boost units... */
       const value_type d = m_interval_sequence[j] / (static_cast<value_type>(2) * dt);
       value_type f = 1.0;  // factor 1/2 here because our interpolation interval has length 2 !!!

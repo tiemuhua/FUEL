@@ -12,8 +12,8 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "exploration_node");
   ros::NodeHandle nh("~");
 
-  FastExplorationFSM expl_fsm;
-  expl_fsm.init(nh);
+  FastExplorationFSM expl_fsm(nh);
+//  expl_fsm.init(nh);
 
   ros::Duration(1.0).sleep();
   ros::spin();

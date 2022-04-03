@@ -74,7 +74,7 @@ void load_waypoints(ros::NodeHandle& nh, const ros::Time& time_base) {
   int seg_cnt = 0;
   waypointSegments.clear();
   ROS_ASSERT(nh.getParam("segment_cnt", seg_cnt));
-  for (int i = 0; i < seg_cnt; ++i) {
+  for (size_t i = 0; i < seg_cnt; ++i) {
     load_seg(nh, i, time_base);
     if (i > 0) {
       ROS_ASSERT(waypointSegments[i - 1].header.stamp < waypointSegments[i].header.stamp);

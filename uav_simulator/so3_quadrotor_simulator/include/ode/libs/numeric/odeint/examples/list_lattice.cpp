@@ -63,7 +63,7 @@ using namespace boost::numeric::odeint;
 int main() {
   const int N = 32;
   state_type x;
-  for (int i = 0; i < N; ++i)
+  for (size_t i = 0; i < N; ++i)
     x.push_back(1.0 * i / N);
 
   integrate_const(runge_kutta4<state_type>(), lattice, x, 0.0, 10.0, 0.1);

@@ -1072,7 +1072,7 @@ public:
       trace.inliners = backtrace_inliners(fobj, *details_selected);
 
 #if 0
-			if (trace.inliners.size() == 0) {
+			if (trace.inliners.empty()) {
 				// Maybe the trace was not inlined... or maybe it was and we
 				// are lacking the debug information. Let's try to make the
 				// world better and see if we can get the line number of the
@@ -1464,7 +1464,7 @@ public:
     }
 
     deep_first_search_by_pc(cudie, trace_addr - mod_bias, inliners_search_cb(trace));
-    if (trace.source.function.size() == 0) {
+    if (trace.source.function.empty()) {
       // fallback.
       trace.source.function = trace.object_function;
     }
@@ -2085,7 +2085,7 @@ private:
       if (dwarf_srclines_from_linecontext(de.line_context, &de.line_buffer, &de.line_count, &error) ==
           DW_DLV_OK) {
         // Add all the addresses to our map
-        for (int i = 0; i < de.line_count; i++) {
+        for (size_t i = 0; i < de.line_count; i++) {
           if (dwarf_lineaddr(de.line_buffer[i], &line_addr, &error) != DW_DLV_OK) {
             line_addr = 0;
           }
@@ -2269,7 +2269,7 @@ private:
         if (dwarf_get_ranges_a(dwarf, offset, die, &ranges, &ranges_count, &byte_count, &error) ==
             DW_DLV_OK) {
           has_ranges = ranges_count != 0;
-          for (int i = 0; i < ranges_count; i++) {
+          for (size_t i = 0; i < ranges_count; i++) {
             if (ranges[i].dwr_addr1 != 0 && pc >= ranges[i].dwr_addr1 + low_pc &&
                 pc < ranges[i].dwr_addr2 + low_pc) {
               result = true;
@@ -2372,7 +2372,7 @@ private:
       // If we couldn't resolve the type just print out the signature
       std::ostringstream string_stream;
       string_stream << "<0x" << std::hex << std::setfill('0');
-      for (int i = 0; i < 8; ++i) {
+      for (size_t i = 0; i < 8; ++i) {
         string_stream << std::setw(2) << std::hex << (int)(unsigned char)(signature.signature[i]);
       }
       string_stream << ">";
@@ -2869,7 +2869,7 @@ private:
         if (file_index <= file_count) file = std::string(srcfiles[file_index - 1]);
 
         // Deallocate all strings!
-        for (int i = 0; i < file_count; ++i) {
+        for (size_t i = 0; i < file_count; ++i) {
           dwarf_dealloc(dwarf, srcfiles[i], DW_DLA_STRING);
         }
         dwarf_dealloc(dwarf, srcfiles, DW_DLA_LIST);

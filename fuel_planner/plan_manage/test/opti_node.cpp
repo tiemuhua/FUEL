@@ -36,7 +36,7 @@ void displayPathWithColor(vector<Eigen::Vector3d> path, double resolution, Eigen
   mk.color.r = color(0), mk.color.g = color(1), mk.color.b = color(2), mk.color.a = color(3);
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(path.size()); i++) {
+  for (size_t i = 0; i < int(path.size()); i++) {
     pt.x = path[i](0), pt.y = path[i](1), pt.z = path[i](2);
     mk.points.push_back(pt);
   }
@@ -104,9 +104,9 @@ int main(int argc, char** argv) {
 
   /* ---------- convert coefficient to polynomial ---------- */
   PolynomialTraj poly_traj;
-  for (int i = 0; i < coeff.rows(); ++i) {
+  for (size_t i = 0; i < coeff.rows(); ++i) {
     vector<double> cx(6), cy(6), cz(6);
-    for (int j = 0; j < 6; ++j) {
+    for (size_t j = 0; j < 6; ++j) {
       cx[j] = coeff(i, j), cy[j] = coeff(i, j + 6), cz[j] = coeff(i, j + 12);
     }
     reverse(cx.begin(), cx.end());

@@ -38,7 +38,7 @@ public:
   void init() {
     num_seg = times.size();
     time_sum = 0.0;
-    for (int i = 0; i < times.size(); ++i) {
+    for (size_t i = 0; i < times.size(); ++i) {
       time_sum += times[i];
     }
   }
@@ -54,7 +54,7 @@ public:
     /* evaluation */
     int order = cxs[idx].size();
     Eigen::VectorXd cx(order), cy(order), cz(order), tv(order);
-    for (int i = 0; i < order; ++i) {
+    for (size_t i = 0; i < order; ++i) {
       cx(i) = cxs[idx][i], cy(i) = cys[idx][i], cz(i) = czs[idx][i];
       tv(order - 1 - i) = std::pow(t, double(i));
     }
@@ -77,14 +77,14 @@ public:
     Eigen::VectorXd vx(order - 1), vy(order - 1), vz(order - 1);
 
     /* coef of vel */
-    for (int i = 0; i < order - 1; ++i) {
+    for (size_t i = 0; i < order - 1; ++i) {
       vx(i) = double(i + 1) * cxs[idx][order - 2 - i];
       vy(i) = double(i + 1) * cys[idx][order - 2 - i];
       vz(i) = double(i + 1) * czs[idx][order - 2 - i];
     }
     double ts = t;
     Eigen::VectorXd tv(order - 1);
-    for (int i = 0; i < order - 1; ++i)
+    for (size_t i = 0; i < order - 1; ++i)
       tv(i) = pow(ts, i);
 
     Eigen::Vector3d vel;
@@ -105,14 +105,14 @@ public:
     Eigen::VectorXd ax(order - 2), ay(order - 2), az(order - 2);
 
     /* coef of vel */
-    for (int i = 0; i < order - 2; ++i) {
+    for (size_t i = 0; i < order - 2; ++i) {
       ax(i) = double((i + 2) * (i + 1)) * cxs[idx][order - 3 - i];
       ay(i) = double((i + 2) * (i + 1)) * cys[idx][order - 3 - i];
       az(i) = double((i + 2) * (i + 1)) * czs[idx][order - 3 - i];
     }
     double ts = t;
     Eigen::VectorXd tv(order - 2);
-    for (int i = 0; i < order - 2; ++i)
+    for (size_t i = 0; i < order - 2; ++i)
       tv(i) = pow(ts, i);
 
     Eigen::Vector3d acc;
@@ -173,7 +173,7 @@ public:
       Eigen::VectorXd cxv(cxs[s].size()), cyv(cys[s].size()), czv(czs[s].size());
       /* convert coefficient */
       int order = cxs[s].size();
-      for (int j = 0; j < order; ++j) {
+      for (size_t j = 0; j < order; ++j) {
         cxv(j) = cxs[s][order - 1 - j], cyv(j) = cys[s][order - 1 - j], czv(j) = czs[s][order - 1 - j];
       }
       double ts = times[s];
@@ -203,7 +203,7 @@ public:
       Eigen::VectorXd vx(order - 1), vy(order - 1), vz(order - 1);
 
       /* coef of vel */
-      for (int i = 0; i < order - 1; ++i) {
+      for (size_t i = 0; i < order - 1; ++i) {
         vx(i) = double(i + 1) * cxs[s][order - 2 - i];
         vy(i) = double(i + 1) * cys[s][order - 2 - i];
         vz(i) = double(i + 1) * czs[s][order - 2 - i];
@@ -213,7 +213,7 @@ public:
       double eval_t = 0.0;
       while (eval_t < ts) {
         Eigen::VectorXd tv(order - 1);
-        for (int i = 0; i < order - 1; ++i)
+        for (size_t i = 0; i < order - 1; ++i)
           tv(i) = pow(ts, i);
         Eigen::Vector3d vel;
         vel(0) = tv.dot(vx), vel(1) = tv.dot(vy), vel(2) = tv.dot(vz);
@@ -237,7 +237,7 @@ public:
       Eigen::VectorXd ax(order - 2), ay(order - 2), az(order - 2);
 
       /* coef of acc */
-      for (int i = 0; i < order - 2; ++i) {
+      for (size_t i = 0; i < order - 2; ++i) {
         ax(i) = double((i + 2) * (i + 1)) * cxs[s][order - 3 - i];
         ay(i) = double((i + 2) * (i + 1)) * cys[s][order - 3 - i];
         az(i) = double((i + 2) * (i + 1)) * czs[s][order - 3 - i];
@@ -247,7 +247,7 @@ public:
       double eval_t = 0.0;
       while (eval_t < ts) {
         Eigen::VectorXd tv(order - 2);
-        for (int i = 0; i < order - 2; ++i)
+        for (size_t i = 0; i < order - 2; ++i)
           tv(i) = pow(ts, i);
         Eigen::Vector3d acc;
         acc(0) = tv.dot(ax), acc(1) = tv.dot(ay), acc(2) = tv.dot(az);

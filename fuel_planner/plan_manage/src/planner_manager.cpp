@@ -3,6 +3,7 @@
 #include <plan_env/sdf_map.h>
 #include <plan_env/raycast.h>
 
+#include <memory>
 #include <thread>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -12,14 +13,11 @@
 namespace fast_planner {
 // SECTION interfaces for setup and query
 
-    FastPlannerManager::FastPlannerManager() {
-    }
-
     FastPlannerManager::~FastPlannerManager() {
         std::cout << "des manager" << std::endl;
     }
 
-    void FastPlannerManager::initPlanModules(ros::NodeHandle &nh) {
+    FastPlannerManager::FastPlannerManager(ros::NodeHandle &nh) {
         /* read algorithm parameters */
 
         nh.param("manager/max_vel", pp_.max_vel_, -1.0);
@@ -50,40 +48,28 @@ namespace fast_planner {
         edt_environment_->setMap(sdf_map_);
 
         if (use_geometric_path) {
-            path_finder_.reset(new Astar);
-            // path_finder_->setParam(nh);
-            // path_finder_->setEnvironment(edt_environment_);
-            // path_finder_->init();
-            path_finder_->init(nh, edt_environment_);
+            astar_path_finder_ = std::make_unique<Astar>(nh, edt_environment_);
         }
 
         if (use_kinodynamic_path) {
-            kino_path_finder_.reset(new KinodynamicAstar);
-            kino_path_finder_->setParam(nh);
-            kino_path_finder_->setEnvironment(edt_environment_);
-            kino_path_finder_->init();
+            kino_path_finder_ = std::make_unique<KinodynamicAstar>(nh, edt_environment_);
         }
 
         if (use_optimization) {
             bspline_optimizers_.resize(10);
-            for (int i = 0; i < 10; ++i) {
-                bspline_optimizers_[i].reset(new BsplineOptimizer);
-                bspline_optimizers_[i]->setParam(nh);
-                bspline_optimizers_[i]->setEnvironment(edt_environment_);
+            for (size_t i = 0; i < 10; ++i) {
+                bspline_optimizers_[i] = std::make_unique<BsplineOptimizer>(nh, edt_environment_);
             }
         }
 
         if (use_topo_path) {
-            topo_prm_.reset(new TopologyPRM);
-            topo_prm_->setEnvironment(edt_environment_);
-            topo_prm_->init(nh);
+            topo_prm_ = std::make_unique<TopologyPRM>(nh, edt_environment_);
         }
 
         if (use_active_perception) {
-            frontier_finder_.reset(new FrontierFinder(edt_environment_, nh));
-            heading_planner_.reset(new HeadingPlanner(nh));
-            heading_planner_->setMap(sdf_map_);
-            visib_util_.reset(new VisibilityUtil(nh));
+            frontier_finder_ = std::make_unique<FrontierFinder>(edt_environment_, nh);
+            heading_planner_ = std::make_unique<HeadingPlanner>(nh, sdf_map_);
+            visib_util_ = std::make_unique<VisibilityUtil>(nh);
             visib_util_->setEDTEnvironment(edt_environment_);
             plan_data_.view_cons_.idx_ = -1;
         }
@@ -134,10 +120,9 @@ namespace fast_planner {
             return false;
         }
 
-        // Kinodynamic path searching
-
-        auto t1 = ros::Time::now();
-
+        /******************************
+         * Kinodynamic path searching *
+         ******************************/
         kino_path_finder_->reset();
         int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, true);
         if (status == KinodynamicAstar::NO_PATH) {
@@ -150,34 +135,28 @@ namespace fast_planner {
                 return false;
             }
         }
-        plan_data_.kino_path_ = kino_path_finder_->getKinoTraj(0.01);
+        plan_data_.kino_path_ = kino_path_finder_->getKinoTraj();
 
-        double t_search = (ros::Time::now() - t1).toSec();
-        t1 = ros::Time::now();
-
-        // Parameterize path to B-spline
+        /*********************************
+         * Parameterize path to B-spline *
+         *********************************/
         double ts = pp_.ctrl_pt_dist / pp_.max_vel_;
         vector<Eigen::Vector3d> point_set, start_end_derivatives;
         kino_path_finder_->getSamples(ts, point_set, start_end_derivatives);
-
-        // std::cout << "point set:" << std::endl;
-        // for (auto pt : point_set) std::cout << pt.transpose() << std::endl;
-        // std::cout << "derivative:" << std::endl;
-        // for (auto dr : start_end_derivatives) std::cout << dr.transpose() << std::endl;
-
         Eigen::MatrixXd ctrl_pts;
         NonUniformBspline::parameterizeToBspline(
                 ts, point_set, start_end_derivatives, pp_.bspline_degree_, ctrl_pts);
         NonUniformBspline init(ctrl_pts, pp_.bspline_degree_, ts);
 
-        // B-spline-based optimization
+        /*********************************
+         * B-spline-based optimization   *
+         *********************************/
         int cost_function = BsplineOptimizer::NORMAL_PHASE;
         if (pp_.min_time_) cost_function |= BsplineOptimizer::MINTIME;
         vector<Eigen::Vector3d> start, end;
         init.getBoundaryStates(2, 0, start, end);
         bspline_optimizers_[0]->setBoundaryStates(start, end);
         if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
-
         bspline_optimizers_[0]->optimize(ctrl_pts, ts, cost_function, 1, 1);
         local_data_.position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
 
@@ -186,75 +165,6 @@ namespace fast_planner {
         std::cout << "State error: (" << (start2[0] - start[0]).norm() << ", "
                   << (start2[1] - start[1]).norm() << ", " << (start2[2] - start[2]).norm() << ")"
                   << std::endl;
-
-        double t_opt = (ros::Time::now() - t1).toSec();
-        ROS_WARN("Kino t: %lf, opt: %lf", t_search, t_opt);
-
-        // t1 = ros::Time::now();
-
-        // // Adjust time and refine
-
-        // double dt;
-        // for (int i = 0; i < 2; ++i)
-        // {
-        //   NonUniformBspline pos = NonUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
-        //   pos.setPhysicalLimits(pp_.max_vel_, pp_.max_acc_);
-        //   pos.lengthenTime(min(1.01, pos.checkRatio()));
-        //   double duration = pos.getTimeSum();
-        //   dt = duration / double(pos.getControlPoint().rows() - pp_.bspline_degree_);
-
-        //   point_set.clear();
-        //   for (double time = 0.0; time <= duration + 1e-4; time += dt)
-        //     point_set.push_back(pos.evaluateDeBoorT(time));
-        //   NonUniformBspline::parameterizeToBspline(dt, point_set, start_end_derivatives,
-        //   pp_.bspline_degree_, ctrl_pts);
-        //   bspline_optimizers_[0]->optimize(ctrl_pts, dt, cost_function, 1, 1);
-        // }
-        // local_data_.position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
-
-        // iterative time adjustment
-
-        // double to = pos.getTimeSum();
-        // pos.setPhysicalLimits(pp_.max_vel_, pp_.max_acc_);
-        // bool feasible = pos.checkFeasibility(false);
-
-        // int iter_num = 0;
-        // while (!feasible && ros::ok()) {
-
-        //   feasible = pos.reallocateTime();
-
-        //   if (++iter_num >= 3) break;
-        // }
-
-        // // pos.checkFeasibility(true);
-        // // cout << "[Main]: iter num: " << iter_num << endl;
-
-        // double tn = pos.getTimeSum();
-
-        // cout << "[kino replan]: Reallocate ratio: " << tn / to << endl;
-        // if (tn / to > 3.0) ROS_ERROR("reallocate error.");
-
-        // t_adjust = (ros::Time::now() - t1).toSec();
-
-        // // save planned results
-
-        // local_data_.position_traj_ = pos;
-
-        // double t_total = t_search + t_opt + t_adjust;
-        // cout << "[kino replan]: time: " << t_total << ", search: " << t_search << ",
-        // optimize: " << t_opt
-        //      << ", adjust time:" << t_adjust << endl;
-
-        // pp_.time_search_   = t_search;
-        // pp_.time_optimize_ = t_opt;
-        // pp_.time_adjust_   = t_adjust;
-
-        // int rd = rand() % 2;
-        // if (rd == 0) {
-        //   updateTrajInfo();
-        //   return true;
-        // } else
-        //   return false;
 
         updateTrajInfo();
         return true;
@@ -268,11 +178,11 @@ namespace fast_planner {
         // Generate traj through waypoints-based method
         const int pt_num = tour.size();
         Eigen::MatrixXd pos(pt_num, 3);
-        for (int i = 0; i < pt_num; ++i) pos.row(i) = tour[i];
+        for (size_t i = 0; i < pt_num; ++i) pos.row(i) = tour[i];
 
         Eigen::Vector3d zero(0, 0, 0);
         Eigen::VectorXd times(pt_num - 1);
-        for (int i = 0; i < pt_num - 1; ++i)
+        for (size_t i = 0; i < pt_num - 1; ++i)
             times(i) = (pos.row(i + 1) - pos.row(i)).norm() / (pp_.max_vel_ * 0.5);
 
         PolynomialTraj init_traj;
@@ -322,7 +232,7 @@ namespace fast_planner {
 
         // Generate global reference trajectory
         vector<Eigen::Vector3d> points = plan_data_.global_waypoints_;
-        if (points.size() == 0) std::cout << "no global waypoints!" << std::endl;
+        if (points.empty()) std::cout << "no global waypoints!" << std::endl;
 
         points.insert(points.begin(), start_pos);
 
@@ -330,7 +240,7 @@ namespace fast_planner {
         vector<Eigen::Vector3d> inter_points;
         const double dist_thresh = 4.0;
 
-        for (int i = 0; i < points.size() - 1; ++i) {
+        for (size_t i = 0; i < points.size() - 1; ++i) {
             inter_points.push_back(points.at(i));
             double dist = (points.at(i + 1) - points.at(i)).norm();
             if (dist > dist_thresh) {
@@ -352,11 +262,11 @@ namespace fast_planner {
 
         int pt_num = inter_points.size();
         Eigen::MatrixXd pos(pt_num, 3);
-        for (int i = 0; i < pt_num; ++i) pos.row(i) = inter_points[i];
+        for (size_t i = 0; i < pt_num; ++i) pos.row(i) = inter_points[i];
 
         Eigen::Vector3d zero(0, 0, 0);
         Eigen::VectorXd time(pt_num - 1);
-        for (int i = 0; i < pt_num - 1; ++i)
+        for (size_t i = 0; i < pt_num - 1; ++i)
             time(i) = (pos.row(i + 1) - pos.row(i)).norm() / (pp_.max_vel_ * 0.5);
 
         time(0) += pp_.max_vel_ / (2 * pp_.max_acc_);
@@ -415,7 +325,7 @@ namespace fast_planner {
             vector<Eigen::Vector3d> colli_start, colli_end, start_pts, end_pts;
             findCollisionRange(colli_start, colli_end, start_pts, end_pts);
 
-            if (colli_start.size() == 1 && colli_end.size() == 0) {
+            if (colli_start.size() == 1 && colli_end.empty()) {
                 ROS_WARN("Init traj ends in obstacle, no replanning.");
                 local_data_.position_traj_ = init_traj;
                 global_data_.setLocalTraj(init_traj, t_now, local_traj_duration + t_now, 0.0);
@@ -429,7 +339,7 @@ namespace fast_planner {
                 topo_prm_->findTopoPaths(colli_start.front(), colli_end.back(), start_pts, end_pts, graph,
                                          raw_paths, filtered_paths, select_paths);
 
-                if (select_paths.size() == 0) {
+                if (select_paths.empty()) {
                     ROS_WARN("No path.");
                     return false;
                 }
@@ -442,13 +352,11 @@ namespace fast_planner {
                 plan_data_.topo_traj_pos1_.resize(select_paths.size());
                 plan_data_.topo_traj_pos2_.resize(select_paths.size());
                 vector<thread> optimize_threads;
-                for (int i = 0; i < select_paths.size(); ++i) {
+                for (size_t i = 0; i < select_paths.size(); ++i) {
                     optimize_threads.emplace_back(&FastPlannerManager::optimizeTopoBspline, this, t_now,
                                                   local_traj_duration, select_paths[i], i);
-                    // optimizeTopoBspline(t_now, local_traj_duration,
-                    // select_paths[i], origin_len, i);
                 }
-                for (int i = 0; i < select_paths.size(); ++i) optimize_threads[i].join();
+                for (size_t i = 0; i < select_paths.size(); ++i) optimize_threads[i].join();
 
                 double t_opt = (ros::Time::now() - t1).toSec();
                 cout << "[planner]: optimization time: " << t_opt << endl;
@@ -486,15 +394,6 @@ namespace fast_planner {
         int cost_function = BsplineOptimizer::NORMAL_PHASE;
         if (pp_.min_time_) cost_function |= BsplineOptimizer::MINTIME;
 
-        // ViewConstraint view_cons;
-        // visib_util_->calcViewConstraint(best_traj, view_cons);
-        // plan_data_.view_cons_ = view_cons;
-        // if (view_cons.idx_ >= 0)
-        // {
-        //   cost_function |= BsplineOptimizer::VIEWCONS;
-        //   bspline_optimizers_[0]->setViewConstraint(view_cons);
-        // }
-
         // Refine selected best traj
         Eigen::MatrixXd ctrl_pts = best_traj.getControlPoint();
         double dt = best_traj.getKnotSpan();
@@ -507,9 +406,9 @@ namespace fast_planner {
 
         vector<Eigen::Vector3d> start2, end2;
         best_traj.getBoundaryStates(2, 2, start2, end2);
-        for (int i = 0; i < 3; ++i)
+        for (size_t i = 0; i < 3; ++i)
             std::cout << "error start: " << (start1[i] - start2[i]).norm() << std::endl;
-        for (int i = 0; i < 1; ++i)
+        for (size_t i = 0; i < 1; ++i)
             std::cout << "error end  : " << (end1[i] - end2[i]).norm() << std::endl;
     }
 
@@ -521,27 +420,6 @@ namespace fast_planner {
         local_data_.duration_ = local_data_.position_traj_.getTimeSum();
 
         local_data_.traj_id_ += 1;
-    }
-
-    void FastPlannerManager::reparamBspline(NonUniformBspline &bspline, double ratio,
-                                            Eigen::MatrixXd &ctrl_pts, double &dt, double &time_inc) {
-        int prev_num = bspline.getControlPoint().rows();
-        double time_origin = bspline.getTimeSum();
-
-        int seg_num = bspline.getControlPoint().rows() - pp_.bspline_degree_;
-        ratio = min(1.01, ratio);
-
-        bspline.lengthenTime(ratio);
-        double duration = bspline.getTimeSum();
-        dt = duration / double(seg_num);
-        time_inc = duration - time_origin;
-
-        vector<Eigen::Vector3d> point_set;
-        for (double time = 0.0; time <= duration + 1e-4; time += dt)
-            point_set.push_back(bspline.evaluateDeBoorT(time));
-        NonUniformBspline::parameterizeToBspline(
-                dt, point_set, plan_data_.local_start_end_derivative_, pp_.bspline_degree_, ctrl_pts);
-        // ROS_WARN("prev: %d, new: %d", prev_num, ctrl_pts.rows());
     }
 
     void FastPlannerManager::optimizeTopoBspline(
@@ -568,7 +446,7 @@ namespace fast_planner {
             if (guide_pts.size() != int(ctrl_pts.rows()) - 6) ROS_WARN("Incorrect guide for 3 degree");
         } else if (pp_.bspline_degree_ == 4) {
             topo_prm_->pathToGuidePts(guide_path, int(2 * ctrl_pts.rows()) - 7, tmp_pts);
-            for (int i = 0; i < tmp_pts.size(); ++i) {
+            for (size_t i = 0; i < tmp_pts.size(); ++i) {
                 if (i % 2 == 1 && i >= 5 && i <= tmp_pts.size() - 6) guide_pts.push_back(tmp_pts[i]);
             }
             if (guide_pts.size() != int(ctrl_pts.rows()) - 8) ROS_WARN("Incorrect guide for 4 degree");
@@ -590,8 +468,6 @@ namespace fast_planner {
 
         // Second phase, smooth+safety+feasibility
         int cost_func = BsplineOptimizer::NORMAL_PHASE;
-        // if (pp_.min_time_)
-        //   cost_func |= BsplineOptimizer::MINTIME;
         bspline_optimizers_[traj_id]->setBoundaryStates(start, end);
         bspline_optimizers_[traj_id]->optimize(ctrl_pts, dt, cost_func, 1, 1);
         plan_data_.topo_traj_pos2_[traj_id] = NonUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
@@ -643,10 +519,10 @@ namespace fast_planner {
         double t_s = -1.0, t_e;
         for (double tc = t_m; tc <= t_mp + 1e-4; tc += 0.05) {
             Eigen::Vector3d ptc = initial_traj->evaluateDeBoor(tc);
-            safe = edt_environment_->evaluateCoarseEDT(ptc, -1.0) < topo_prm_->clearance_ ? false : true;
+            safe = !(edt_environment_->evaluateCoarseEDT(ptc, -1.0) < topo_prm_->clearance_);
 
             if (last_safe && !safe) {
-                colli_start.push_back(initial_traj->evaluateDeBoor(tc - 0.05));
+                colli_start.emplace_back(initial_traj->evaluateDeBoor(tc - 0.05));
                 if (t_s < 0.0) t_s = tc - 0.05;
             } else if (!last_safe && safe) {
                 colli_end.push_back(ptc);
@@ -656,9 +532,9 @@ namespace fast_planner {
             last_safe = safe;
         }
 
-        if (colli_start.size() == 0) return;
+        if (colli_start.empty()) return;
 
-        if (colli_start.size() == 1 && colli_end.size() == 0) return;
+        if (colli_start.size() == 1 && colli_end.empty()) return;
 
         /* find start and end safe segment */
         double dt = initial_traj->getKnotSpan();
@@ -666,25 +542,19 @@ namespace fast_planner {
         dt = (t_s - t_m) / sn;
 
         for (double tc = t_m; tc <= t_s + 1e-4; tc += dt) {
-            start_pts.push_back(initial_traj->evaluateDeBoor(tc));
+            start_pts.emplace_back(initial_traj->evaluateDeBoor(tc));
         }
 
         dt = initial_traj->getKnotSpan();
         sn = ceil((t_mp - t_e) / dt);
         dt = (t_mp - t_e) / sn;
-        // std::cout << "dt: " << dt << std::endl;
-        // std::cout << "sn: " << sn << std::endl;
-        // std::cout << "t_m: " << t_m << std::endl;
-        // std::cout << "t_mp: " << t_mp << std::endl;
-        // std::cout << "t_s: " << t_s << std::endl;
-        // std::cout << "t_e: " << t_e << std::endl;
 
         if (dt > 1e-4) {
             for (double tc = t_e; tc <= t_mp + 1e-4; tc += dt) {
-                end_pts.push_back(initial_traj->evaluateDeBoor(tc));
+                end_pts.emplace_back(initial_traj->evaluateDeBoor(tc));
             }
         } else {
-            end_pts.push_back(initial_traj->evaluateDeBoor(t_mp));
+            end_pts.emplace_back(initial_traj->evaluateDeBoor(t_mp));
         }
     }
 
@@ -708,7 +578,7 @@ namespace fast_planner {
 
         // seg_num -> seg_num - 1 points for constraint excluding the boundary states
 
-        for (int i = 0; i < seg_num; ++i) {
+        for (size_t i = 0; i < seg_num; ++i) {
             double tc = i * dt_yaw;
             Eigen::Vector3d pc = pos.evaluateDeBoorT(tc);
             double tf = min(duration, tc + forward_t);
@@ -761,7 +631,7 @@ namespace fast_planner {
         local_data_.yawdotdot_traj_ = local_data_.yawdot_traj_.getDerivative();
 
         vector<double> path_yaw;
-        for (int i = 0; i < waypts.size(); ++i) path_yaw.push_back(waypts[i][0]);
+        for (size_t i = 0; i < waypts.size(); ++i) path_yaw.push_back(waypts[i][0]);
         plan_data_.path_yaw_ = path_yaw;
         plan_data_.dt_yaw_ = dt_yaw;
         plan_data_.dt_yaw_path_ = dt_yaw;
@@ -826,17 +696,6 @@ namespace fast_planner {
             ROS_ERROR("Yaw change rapidly!");
             std::cout << "start yaw: " << start_yaw3d[0] << ", " << end_yaw3d[0] << std::endl;
         }
-
-        // // Interpolate start and end value for smoothness
-        // for (int i = 1; i < seg_num; ++i)
-        // {
-        //   double tc = i * dt_yaw;
-        //   Eigen::Vector3d waypt = (1 - double(i) / seg_num) * start_yaw3d + double(i) / seg_num *
-        //   end_yaw3d;
-        //   std::cout << "i: " << i << ", wp: " << waypt[0] << ", ";
-        //   calcNextYaw(last_yaw, waypt(0));
-        // }
-        // std::cout << "" << std::endl;
 
         auto t1 = ros::Time::now();
 

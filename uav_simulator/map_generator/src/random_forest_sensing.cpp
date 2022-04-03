@@ -73,7 +73,7 @@ void RandomMapGenerate()
   rand_z_ = uniform_real_distribution<double>(z_l_, z_h_);
 
   // generate polar obs
-  for (int i = 0; i < _obs_num; i++)
+  for (size_t i = 0; i < _obs_num; i++)
   {
     double x, y, w, h;
     x = rand_x(eng);
@@ -107,7 +107,7 @@ void RandomMapGenerate()
   }
 
   // generate circle obs
-  for (int i = 0; i < circle_num_; ++i)
+  for (size_t i = 0; i < circle_num_; ++i)
   {
     double x, y, z;
     x = rand_x(eng);

@@ -230,7 +230,7 @@ mat Jplus1(const colvec& X1, const colvec& X2) {
                          X2(3 - 1) * sin(X1(5 - 1)) * cos(X1(6 - 1)),
                      a1(3 - 1) * X2(2 - 1) - o1(3 - 1) * X2(3 - 1) };
   mat M(3, 3);
-  for (int i = 0; i < 9; i++)
+  for (size_t i = 0; i < 9; i++)
     M(i) = Marr[i];
   M = trans(M);
 
@@ -244,7 +244,7 @@ mat Jplus1(const colvec& X1, const colvec& X2) {
                       sin(X3(4 - 1) - X1(4 - 1)) / cos(X3(5 - 1)),
                       cos(X1(5 - 1)) * cos(X3(4 - 1) - X1(4 - 1)) / cos(X3(5 - 1)) };
   mat K1(3, 3);
-  for (int i = 0; i < 9; i++)
+  for (size_t i = 0; i < 9; i++)
     K1(i) = K1arr[i];
   K1 = trans(K1);
 
@@ -274,7 +274,7 @@ mat Jplus2(const colvec& X1, const colvec& X2) {
                       sin(X3(5 - 1)) * sin(X3(6 - 1) - X2(6 - 1)) / cos(X3(5 - 1)),
                       1 };
   mat K2(3, 3);
-  for (int i = 0; i < 9; i++)
+  for (size_t i = 0; i < 9; i++)
     K2(i) = K2arr[i];
   K2 = trans(K2);
 

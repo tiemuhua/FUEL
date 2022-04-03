@@ -47,10 +47,10 @@ void Quadrotor::step(double dt) {
 
   odeint::integrate(boost::ref(*this), internal_state_, 0.0, dt, dt);
 
-  for (int i = 0; i < 22; ++i) {
+  for (size_t i = 0; i < 22; ++i) {
     if (std::isnan(internal_state_[i])) {
       std::cout << "dump " << i << " << pos ";
-      for (int j = 0; j < 22; ++j) {
+      for (size_t j = 0; j < 22; ++j) {
         std::cout << save[j] << " ";
       }
       std::cout << std::endl;
@@ -59,7 +59,7 @@ void Quadrotor::step(double dt) {
     }
   }
 
-  for (int i = 0; i < 3; i++) {
+  for (size_t i = 0; i < 3; i++) {
     state_.x(i) = internal_state_[0 + i];
     state_.v(i) = internal_state_[3 + i];
     state_.R(i, 0) = internal_state_[6 + i];
@@ -89,7 +89,7 @@ void Quadrotor::step(double dt) {
 void Quadrotor::operator()(const Quadrotor::InternalState& x, Quadrotor::InternalState& dxdt,
                            const double /* t */) {
   State cur_state;
-  for (int i = 0; i < 3; i++) {
+  for (size_t i = 0; i < 3; i++) {
     cur_state.x(i) = x[0 + i];
     cur_state.v(i) = x[3 + i];
     cur_state.R(i, 0) = x[6 + i];
@@ -97,7 +97,7 @@ void Quadrotor::operator()(const Quadrotor::InternalState& x, Quadrotor::Interna
     cur_state.R(i, 2) = x[12 + i];
     cur_state.omega(i) = x[15 + i];
   }
-  for (int i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 4; i++) {
     cur_state.motor_rpm(i) = x[18 + i];
   }
 
@@ -131,7 +131,7 @@ void Quadrotor::operator()(const Quadrotor::InternalState& x, Quadrotor::Interna
   Eigen::Array4d AOA;
   blade_linear_velocity = 0.104719755  // rpm to rad/s
       * cur_state.motor_rpm.array() * prop_radius_;
-  for (int i = 0; i < 4; ++i)
+  for (size_t i = 0; i < 4; ++i)
     AOA[i] = alpha0 -
         atan2(motor_linear_velocity[i], blade_linear_velocity[i]) *  //
             180 / 3.14159265;
@@ -167,7 +167,7 @@ void Quadrotor::operator()(const Quadrotor::InternalState& x, Quadrotor::Interna
   omega_dot = J_.inverse() * (moments - cur_state.omega.cross(J_ * cur_state.omega) + external_moment_);
   motor_rpm_dot = (input_ - cur_state.motor_rpm) / motor_time_constant_;
 
-  for (int i = 0; i < 3; i++) {
+  for (size_t i = 0; i < 3; i++) {
     dxdt[0 + i] = x_dot(i);
     dxdt[3 + i] = v_dot(i);
     dxdt[6 + i] = R_dot(i, 0);
@@ -175,10 +175,10 @@ void Quadrotor::operator()(const Quadrotor::InternalState& x, Quadrotor::Interna
     dxdt[12 + i] = R_dot(i, 2);
     dxdt[15 + i] = omega_dot(i);
   }
-  for (int i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 4; i++) {
     dxdt[18 + i] = motor_rpm_dot(i);
   }
-  for (int i = 0; i < 22; ++i) {
+  for (size_t i = 0; i < 22; ++i) {
     if (std::isnan(dxdt[i])) {
       dxdt[i] = 0;
       //      std::cout << "nan apply to 0 for " << i << std::endl;
@@ -191,7 +191,7 @@ void Quadrotor::setInput(double u1, double u2, double u3, double u4) {
   input_(1) = u2;
   input_(2) = u3;
   input_(3) = u4;
-  for (int i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 4; i++) {
     if (std::isnan(input_(i))) {
       input_(i) = (max_rpm_ + min_rpm_) / 2;
       std::cout << "NAN input ";
@@ -343,7 +343,7 @@ void Quadrotor::setMinRPM(double min_rpm) {
 }
 
 void Quadrotor::updateInternalState(void) {
-  for (int i = 0; i < 3; i++) {
+  for (size_t i = 0; i < 3; i++) {
     internal_state_[0 + i] = state_.x(i);
     internal_state_[3 + i] = state_.v(i);
     internal_state_[6 + i] = state_.R(i, 0);

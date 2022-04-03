@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
   tsp_file << "EDGE_WEIGHT_FORMAT : LOWER_ROW\n";
   tsp_file << "EDGE_WEIGHT_SECTION\n";
 
-  // for (int i = 0; i < dim; ++i) {
-  //   for (int j = 0; j < i; ++j) {
+  // for (size_t i = 0; i < dim; ++i) {
+  //   for (size_t j = 0; j < i; ++j) {
   //     int xi = i;
   //     int xj = j;
   //     if (i == j)

@@ -51,7 +51,7 @@ void displayLineList(const vector<Eigen::Vector3d>& list1, const vector<Eigen::V
   mk.scale.x = line_width;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(list1.size()); ++i) {
+  for (size_t i = 0; i < int(list1.size()); ++i) {
     pt.x = list1[i](0);
     pt.y = list1[i](1);
     pt.z = list1[i](2);
@@ -94,7 +94,7 @@ void displayTrajWithColor(vector<Eigen::Vector3d> path, double resolution, Eigen
   mk.scale.z = resolution;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(path.size()); i++) {
+  for (size_t i = 0; i < int(path.size()); i++) {
     pt.x = path[i](0);
     pt.y = path[i](1);
     pt.z = path[i](2);
@@ -136,7 +136,7 @@ void cmdCallback(const quadrotor_msgs::PositionCommandConstPtr& msg) {
     Eigen::Vector3d pt_k = traj[idx];
     Eigen::Matrix3d Rwb;
     Rwb << cos(phi_k), -sin(phi_k), 0, sin(phi_k), cos(phi_k), 0, 0, 0, 1;
-    for (int i = 0; i < cam1.size(); ++i) {
+    for (size_t i = 0; i < cam1.size(); ++i) {
       auto p1 = Rwb * cam1[i] + pt_k;
       auto p2 = Rwb * cam2[i] + pt_k;
       yaw1.push_back(p1);
@@ -168,7 +168,7 @@ void trajCallback(const visualization_msgs::MarkerConstPtr& msg) {
   // if(mk.points.size()>0 && mk.points[0].y < 3 && mk.points[0].x >5) return;
 
   // int end = -1;
-  // for (int i = 0; i < mk.points.size(); ++i) {
+  // for (size_t i = 0; i < mk.points.size(); ++i) {
   //   auto pt = mk.points[i];
   //   if (pt.x > 5 && pt.y < 3) {
   //     end = i;
@@ -189,7 +189,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg) {
   pcl::fromROSMsg(*msg, pts2);
 
   // Filter unwanted points
-  for (int i = 0; i < pts2.points.size(); ++i) {
+  for (size_t i = 0; i < pts2.points.size(); ++i) {
     // if (pts2[i].z > 0.0 && pts2[i].z < 0.1 || pts2[i].z > 3.5 || pts2[i].y < -3.5)
     // continue;
     // if (pts2[i].z < 0.0) continue;

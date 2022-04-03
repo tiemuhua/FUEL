@@ -32,7 +32,7 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   mp_->resolution_inv_ = 1 / mp_->resolution_;
   mp_->map_origin_ = Eigen::Vector3d(-x_size / 2.0, -y_size / 2.0, mp_->ground_height_);
   mp_->map_size_ = Eigen::Vector3d(x_size, y_size, z_size);
-  for (int i = 0; i < 3; ++i)
+  for (size_t i = 0; i < 3; ++i)
     mp_->map_voxel_num_(i) = ceil(mp_->map_size_(i) / mp_->resolution_);
   mp_->map_min_boundary_ = mp_->map_origin_;
   mp_->map_max_boundary_ = mp_->map_origin_ + mp_->map_size_;
@@ -76,7 +76,7 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
 
   // Try retriving bounding box of map, set box to map size if not specified
   vector<string> axis = { "x", "y", "z" };
-  for (int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     nh.param("sdf_map/box_min_" + axis[i], mp_->box_mind_[i], mp_->map_min_boundary_[i]);
     nh.param("sdf_map/box_max_" + axis[i], mp_->box_maxd_[i], mp_->map_max_boundary_[i]);
   }
@@ -274,7 +274,7 @@ void SDFMap::inputPointCloud(
   Eigen::Vector3i idx;
   int vox_adr;
   double length;
-  for (int i = 0; i < point_num; ++i) {
+  for (size_t i = 0; i < point_num; ++i) {
     auto& pt = points.points[i];
     pt_w << pt.x, pt.y, pt.z;
     int tmp_flag;
@@ -350,7 +350,7 @@ SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen::Vector3d& camer
   Eigen::Vector3d max_tc = mp_->map_max_boundary_ - camera_pt;
   Eigen::Vector3d min_tc = mp_->map_min_boundary_ - camera_pt;
   double min_t = 1000000;
-  for (int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     if (fabs(diff[i]) > 0) {
       double t1 = max_tc[i] / diff[i];
       if (t1 > 0 && t1 < min_t) min_t = t1;

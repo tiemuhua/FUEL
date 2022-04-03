@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(plan_manage)
 
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14")
 # set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall")
@@ -61,18 +61,6 @@ target_link_libraries(plan_manage ${catkin_LIBRARIES})
 add_executable(traj_server src/traj_server.cpp)
 target_link_libraries(traj_server ${catkin_LIBRARIES} -ldw)
 # add_dependencies(traj_server ${${PROJECT_NAME}_EXPORTED_TARGETS})
-
-# benchmark node
-# add_executable(compare_topo
-#   src/compare_topo.cpp 
-#   src/planner_manager.cpp
-#   )
-# target_link_libraries(compare_topo 
-#   ${catkin_LIBRARIES}
-#   )
-
-# add_executable(rotation test/rotation.cpp)
-# target_link_libraries(rotation ${catkin_LIBRARIES})
 
 add_executable(proc_msg 
     test/process_msg.cpp

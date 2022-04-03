@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   cloud.header.frame_id = "world";
 
   // Rotate the cloud
-  for (int i = 0; i < cloud.points.size(); ++i) {
+  for (size_t i = 0; i < cloud.points.size(); ++i) {
     auto pt = cloud.points[i];
     pcl::PointXYZ pr;
     pr.x = pt.x;

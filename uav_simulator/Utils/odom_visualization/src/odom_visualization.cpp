@@ -141,8 +141,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   // Covariance Position
   if (cov_pos) {
     mat P(6, 6);
-    for (int j = 0; j < 6; j++)
-      for (int i = 0; i < 6; i++)
+    for (size_t j = 0; j < 6; j++)
+      for (size_t i = 0; i < 6; i++)
         P(i, j) = msg->pose.covariance[i + j * 6];
     colvec eigVal;
     mat eigVec;
@@ -184,8 +184,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   // Covariance Velocity
   if (cov_vel) {
     mat P(3, 3);
-    for (int j = 0; j < 3; j++)
-      for (int i = 0; i < 3; i++)
+    for (size_t j = 0; j < 3; j++)
+      for (size_t i = 0; i < 3; i++)
         P(i, j) = msg->twist.covariance[i + j * 6];
     mat R = ypr_to_R(pose.rows(3, 5));
     P = R * P * trans(R);

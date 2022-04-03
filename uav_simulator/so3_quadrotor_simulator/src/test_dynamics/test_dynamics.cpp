@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   double KD = 2.5;
   const double z_des = 0.5;
   clock_gettime(CLOCK_MONOTONIC, &ts_start);
-  for (int i = 0; i < 6000; i++) {
+  for (size_t i = 0; i < 6000; i++) {
     state = quad.getState();
     thrust = m * g + KP * (z_des - state.x(2)) + KD * (0 - state.v(2));
     rpm = std::sqrt(thrust / (4 * kf));

@@ -36,14 +36,14 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg) {
   pcl::fromROSMsg(*msg, pts);
   vector<Eigen::Vector3d> inf_pts(27);
 
-  for (int i = 0; i < pts.points.size(); ++i) {
+  for (size_t i = 0; i < pts.points.size(); ++i) {
     Eigen::Vector3d pt;
     pt(0) = pts[i].x;
     pt(1) = pts[i].y;
     pt(2) = pts[i].z;
-    for (int i = 0; i < 3; ++i)
+    for (size_t i = 0; i < 3; ++i)
       pt(i) = floor((pt(i) - map_origin_(i)) * 10);
-    for (int i = 0; i < 3; ++i)
+    for (size_t i = 0; i < 3; ++i)
       pt(i) = (pt(i) + 0.5) * 0.1 + map_origin_(i);
     inflatePoint(pt, 1, inf_pts);
     for (auto pi : inf_pts) {

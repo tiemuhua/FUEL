@@ -119,7 +119,7 @@ public:
     list<OccupancyGrid>::iterator gend = grids.end();
     gend--;
 
-    if (grids.size() == 0)  // Empty case
+    if (grids.empty())  // Empty case
     {
       grids.push_back(grid);
       return;

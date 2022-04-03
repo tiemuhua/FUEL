@@ -130,7 +130,7 @@ static Control getControl(const QuadrotorSimulator::Quadrotor& quad, const Comma
   w_sq[3] = force / (4 * kf) - M1 / (2 * d * kf) - M3 / (4 * km);
 
   Control control;
-  for (int i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 4; i++) {
     if (w_sq[i] < 0) w_sq[i] = 0;
 
     control.rpm[i] = sqrtf(w_sq[i]);
@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
 
     auto last = control;
     control = getControl(quad, command);
-    for (int i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i) {
       //! @bug might have nan when the input is legal
       if (std::isnan(control.rpm[i])) control.rpm[i] = last.rpm[i];
     }

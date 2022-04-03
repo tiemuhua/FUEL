@@ -73,7 +73,7 @@ void PerceptionUtils::getFOV(vector<Vector3d>& list1, vector<Vector3d>& list2) {
   // Get info for visualizing FOV at (pos, yaw)
   Eigen::Matrix3d Rwb;
   Rwb << cos(yaw_), -sin(yaw_), 0, sin(yaw_), cos(yaw_), 0, 0, 0, 1;
-  for (int i = 0; i < cam_vertices1_.size(); ++i) {
+  for (size_t i = 0; i < cam_vertices1_.size(); ++i) {
     auto p1 = Rwb * cam_vertices1_[i] + pos_;
     auto p2 = Rwb * cam_vertices2_[i] + pos_;
     list1.push_back(p1);

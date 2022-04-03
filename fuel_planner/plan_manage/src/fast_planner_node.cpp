@@ -6,33 +6,34 @@
 #include <plan_manage/local_explore_fsm.h>
 
 #include <plan_manage/backward.hpp>
+
 namespace backward {
-backward::SignalHandling sh;
+    backward::SignalHandling sh;
 }
 
 using namespace fast_planner;
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "fast_planner_node");
-  ros::NodeHandle nh("~");
+int main(int argc, char **argv) {
+    ros::init(argc, argv, "fast_planner_node");
+    ros::NodeHandle nh("~");
 
-  int planner;
-  nh.param("planner_node/planner", planner, -1);
+    int planner;
+    nh.param("planner_node/planner", planner, -1);
 
-  TopoReplanFSM topo_replan;
-  KinoReplanFSM kino_replan;
-  LocalExploreFSM local_explore;
+//    TopoReplanFSM topo_replan;
+    KinoReplanFSM kino_replan(nh);
+//    LocalExploreFSM local_explore;
 
-  if (planner == 1) {
-    kino_replan.init(nh);
-  } else if (planner == 2) {
-    topo_replan.init(nh);
-  } else if (planner == 3) {
-    local_explore.init(nh);
-  }
+//    if (planner == 1) {
+//        kino_replan.init(nh);
+//    } else if (planner == 2) {
+//        topo_replan.init(nh);
+//    } else if (planner == 3) {
+//        local_explore.init(nh);
+//    }
 
-  ros::Duration(1.0).sleep();
-  ros::spin();
+    ros::Duration(1.0).sleep();
+    ros::spin();
 
-  return 0;
+    return 0;
 }

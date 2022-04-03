@@ -39,7 +39,7 @@ bool decodeOutputData(const std::vector<uint8_t>& data, quadrotor_msgs::OutputDa
   output.magnetic_field.y = output_data.mag[1] / 2500.0;
   output.magnetic_field.z = output_data.mag[2] / 2500.0;
 
-  for (int i = 0; i < 8; i++) {
+  for (size_t i = 0; i < 8; i++) {
     output.radio_channel[i] = output_data.radio[i];
   }
   // for(int i = 0; i < 4; i++)

@@ -71,7 +71,7 @@ bool read_pose(fstream& file) {
   double para[16];
   while (good) {
     count++;
-    for (int i = 0; i < 8 && good; i++) {
+    for (size_t i = 0; i < 8 && good; i++) {
       good = good && file >> para[i];
     }
     if (good) {
@@ -137,8 +137,8 @@ void solve_pnp() {
   cv::solvePnP(pts_3, pts_2, cv_K, cv::Mat::zeros(4, 1, CV_32FC1), rvec, t);
   cv::Rodrigues(rvec, r);
   Matrix3d R_ref;
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) {
+  for (size_t i = 0; i < 3; i++)
+    for (size_t j = 0; j < 3; j++) {
       R_ref(i, j) = r.at<double>(i, j);
     }
   Matrix4d pnp_result = Matrix4d::Identity();
@@ -223,8 +223,8 @@ void render_currentpose() {
   depth_mat = cv::Mat::zeros(height, width, CV_32FC1);
   double min = 0.5;
   double max = 1.0f;
-  for (int i = 0; i < height; i++)
-    for (int j = 0; j < width; j++) {
+  for (size_t i = 0; i < height; i++)
+    for (size_t j = 0; j < width; j++) {
       float depth = (float)depth_hostptr[i * width + j] / 1000.0f;
       depth = depth < 500.0f ? depth : 0;
       max = depth > max ? depth : max;

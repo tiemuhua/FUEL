@@ -348,7 +348,7 @@ void MapROS::publishUnknown() {
 void MapROS::publishDepth() {
   pcl::PointXYZ pt;
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  for (int i = 0; i < proj_points_cnt; ++i) {
+  for (size_t i = 0; i < proj_points_cnt; ++i) {
     cloud.push_back(point_cloud_.points[i]);
   }
   cloud.width = cloud.points.size();

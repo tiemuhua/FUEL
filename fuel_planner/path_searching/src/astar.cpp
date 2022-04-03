@@ -6,7 +6,7 @@ using namespace Eigen;
 
 namespace fast_planner {
 Astar::~Astar() {
-  for (int i = 0; i < allocate_num_; i++) {
+  for (size_t i = 0; i < allocate_num_; i++) {
     delete path_node_pool_[i];
   }
 }
@@ -145,7 +145,7 @@ void Astar::retrievePath(NodePtr end_node) {
 
 std::vector<Eigen::Vector3d> Astar::getPath() {
   vector<Eigen::Vector3d> path;
-  for (int i = 0; i < path_nodes_.size(); ++i) {
+  for (size_t i = 0; i < path_nodes_.size(); ++i) {
     path.push_back(path_nodes_[i]->position);
   }
   return path;
@@ -193,7 +193,7 @@ void Astar::init() {
   cout << "map size: " << map_size_3d_.transpose() << endl;
 
   path_node_pool_.resize(allocate_num_);
-  for (int i = 0; i < allocate_num_; i++) {
+  for (size_t i = 0; i < allocate_num_; i++) {
     path_node_pool_[i] = new Node;
   }
   use_node_num_ = 0;
@@ -210,7 +210,7 @@ void Astar::reset() {
 
   std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator0> empty_queue;
   open_set_.swap(empty_queue);
-  for (int i = 0; i < use_node_num_; i++) {
+  for (size_t i = 0; i < use_node_num_; i++) {
     NodePtr node = path_node_pool_[i];
     node->parent = NULL;
     node->node_state = NOT_EXPAND;
@@ -221,7 +221,7 @@ void Astar::reset() {
 
 std::vector<Eigen::Vector3d> Astar::getVisited() {
   vector<Eigen::Vector3d> visited;
-  for (int i = 0; i < use_node_num_; ++i)
+  for (size_t i = 0; i < use_node_num_; ++i)
     visited.push_back(path_node_pool_[i]->position);
   return visited;
 }

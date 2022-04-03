@@ -34,7 +34,7 @@ bool have_goal, have_map;
 void mapCallback(const sensor_msgs::PointCloud2& msg) {
   pcl::fromROSMsg(msg, latest_cloud);
 
-  if ((int)latest_cloud.points.size() == 0) return;
+  if ((int)latest_cloud.points.empty()) return;
 
   have_map = true;
   std::cout << "[1]: get map" << std::endl;
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
   edt_env->setMap(sdf_map);
 
   vector<BsplineOptimizer::Ptr> bspline_optimizers;
-  for (int i = 0; i < 10; ++i) {
+  for (size_t i = 0; i < 10; ++i) {
     BsplineOptimizer::Ptr optimizer;
     optimizer.reset(new BsplineOptimizer);
     optimizer->setParam(node);
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     /* ---------- manage map ---------- */
     if (exp_num % use_map_num == 0) {
       sdf_map->resetBuffer();
-      for (int i = 0; i < latest_cloud.points.size(); ++i) {
+      for (size_t i = 0; i < latest_cloud.points.size(); ++i) {
         pcl::PointXYZ pt = latest_cloud.points[i];
         Eigen::Vector3d obs_pt;
         obs_pt(0) = pt.x;
@@ -181,14 +181,14 @@ int main(int argc, char** argv) {
       // traj_generator->getCostCurve(vec_cost, vec_time);
       // cout << "test3:" << exp_num + 1 << ",jerk:" << jerk;
       // cout << ",time:";
-      // for (int i = 0; i < vec_time.size(); ++i)
+      // for (size_t i = 0; i < vec_time.size(); ++i)
       // {
       //   cout << vec_time[i];
       //   if (i != vec_time.size() - 1)
       //     cout << ";";
       // }
       // cout << ",cost:";
-      // for (int i = 0; i < vec_cost.size(); ++i)
+      // for (size_t i = 0; i < vec_cost.size(); ++i)
       // {
       //   cout << vec_cost[i];
       //   if (i != vec_cost.size() - 1)
@@ -208,14 +208,14 @@ int main(int argc, char** argv) {
 
       // file << "test3:" << exp_num + 1 << ",jerk:" << jerk;
       // file << ",time:";
-      // for (int i = 0; i < vec_time.size(); ++i)
+      // for (size_t i = 0; i < vec_time.size(); ++i)
       // {
       //   file << vec_time[i];
       //   if (i != vec_time.size() - 1)
       //     file << ";";
       // }
       // file << ",cost:";
-      // for (int i = 0; i < vec_cost.size(); ++i)
+      // for (size_t i = 0; i < vec_cost.size(); ++i)
       // {
       //   file << vec_cost[i];
       //   if (i != vec_cost.size() - 1)

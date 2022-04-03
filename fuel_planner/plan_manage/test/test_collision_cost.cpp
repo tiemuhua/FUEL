@@ -37,7 +37,7 @@ void buildEnv(pcl::PointCloud<pcl::PointXYZ>& map) {
   centers.push_back(Eigen::Vector3d(-2.5, 2.3, 0.0));
   centers.push_back(Eigen::Vector3d(0.0, 3.5, 0.0));
 
-  for (int i = 0; i < centers.size(); ++i) {
+  for (size_t i = 0; i < centers.size(); ++i) {
     for (double x = -0.27; x <= 0.27; x += resolution)
       for (double y = -0.3; y <= 0.3; y += resolution)
         for (double z = 0; z <= 2.0; z += resolution) {

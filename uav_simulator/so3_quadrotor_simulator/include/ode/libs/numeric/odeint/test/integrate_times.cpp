@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times) {
   integrate_times(runge_kutta4<state_type>(), lorenz, x, boost::counting_iterator<int>(0),
                   boost::counting_iterator<int>(10), dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times) {
                   boost::counting_iterator<int>(0), boost::counting_iterator<int>(10), dt,
                   push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times) {
   integrate_times(bulirsch_stoer<state_type>(), lorenz, x, boost::counting_iterator<int>(0),
                   boost::counting_iterator<int>(10), dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -104,14 +104,14 @@ BOOST_AUTO_TEST_CASE(test_integrate_times) {
                   lorenz, x, boost::counting_iterator<int>(0), boost::counting_iterator<int>(10), dt,
                   push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
 
   integrate_times(bulirsch_stoer_dense_out<state_type>(), lorenz, x, boost::counting_iterator<int>(0),
                   boost::counting_iterator<int>(10), dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
 }
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times_ranges) {
                   std::make_pair(boost::counting_iterator<int>(0), boost::counting_iterator<int>(10)),
                   dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times_ranges) {
                   std::make_pair(boost::counting_iterator<int>(0), boost::counting_iterator<int>(10)),
                   dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times_ranges) {
                   std::make_pair(boost::counting_iterator<int>(0), boost::counting_iterator<int>(10)),
                   dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
   times.clear();
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(test_integrate_times_ranges) {
                   std::make_pair(boost::counting_iterator<int>(0), boost::counting_iterator<int>(10)),
                   dt, push_back_time(times));
 
-  for (int i = 0; i < 10; ++i)
+  for (size_t i = 0; i < 10; ++i)
     // check if observer was called at times 0,1,2,...
     BOOST_CHECK_EQUAL(times[i], static_cast<double>(i));
 }

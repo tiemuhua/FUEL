@@ -70,7 +70,7 @@ void SO3ControlNodelet::publishSO3Command(void) {
   so3_command->orientation.y = orientation.y();
   so3_command->orientation.z = orientation.z();
   so3_command->orientation.w = orientation.w();
-  for (int i = 0; i < 3; i++) {
+  for (size_t i = 0; i < 3; i++) {
     so3_command->kR[i] = kR_[i];
     so3_command->kOm[i] = kOm_[i];
   }

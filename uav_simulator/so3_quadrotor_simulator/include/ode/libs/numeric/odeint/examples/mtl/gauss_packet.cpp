@@ -52,7 +52,7 @@ struct hamiltonian {
     mtl::matrix::inserter<matrix_type, mtl::update_plus<complex<double> > > ins(m_H);
     const double z = 1.0;
     // fill diagonal and upper and lower diagonal
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       ins[i][(i + 1) % N] << complex<double>(0.0, -z);
       ins[i][i] << complex<double>(0.0, z);
       ins[(i + 1) % N][i] << complex<double>(0.0, -z);
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
   state_type x(N, 0.0);
 
   // initialize gauss packet with nonzero velocity
-  for (int i = 0; i < N; ++i) {
+  for (size_t i = 0; i < N; ++i) {
     x[i] = exp(-(i - N0) * (i - N0) / (4.0 * sigma0 * sigma0)) * exp(complex<double>(0.0, k0 * i));
     // x[i] += 2.0*exp( -(i+N0-N)*(i+N0-N) / ( 4.0*sigma0*sigma0 ) ) * exp( complex< double >( 0.0 ,
     // -k0*i ) );
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
   V = 0.0;
   {
     mtl::matrix::inserter<mtl::compressed2D<double> > ins(V);
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       // ins[i][i] << 1E-4*(i-N/2)*(i-N/2);
 
       if (i < N / 2)

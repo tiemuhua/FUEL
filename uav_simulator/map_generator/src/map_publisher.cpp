@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   }
 
   // // Transform map
-  // for (int i = 0; i < cloud.points.size(); ++i)
+  // for (size_t i = 0; i < cloud.points.size(); ++i)
   // {
   //   auto pt = cloud.points[i];
   //   pcl::PointXYZ pr;

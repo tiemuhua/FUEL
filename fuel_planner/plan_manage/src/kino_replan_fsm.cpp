@@ -2,7 +2,7 @@
 #include <plan_manage/kino_replan_fsm.h>
 
 namespace fast_planner {
-    void KinoReplanFSM::init(ros::NodeHandle &nh) {
+    KinoReplanFSM::KinoReplanFSM(ros::NodeHandle &nh) {
         current_wp_ = 0;
         exec_state_ = FSM_EXEC_STATE::INIT;
         have_target_ = false;
@@ -14,15 +14,15 @@ namespace fast_planner {
         nh.param("fsm/thresh_no_replan", no_replan_thresh_, -1.0);
 
         nh.param("fsm/waypoint_num", waypoint_num_, -1);
-        for (int i = 0; i < waypoint_num_; i++) {
+        for (size_t i = 0; i < waypoint_num_; i++) {
             nh.param("fsm/waypoint" + to_string(i) + "_x", waypoints_[i][0], -1.0);
             nh.param("fsm/waypoint" + to_string(i) + "_y", waypoints_[i][1], -1.0);
             nh.param("fsm/waypoint" + to_string(i) + "_z", waypoints_[i][2], -1.0);
         }
 
         /* initialize main modules */
-        planner_manager_.reset(new FastPlannerManager);
-        planner_manager_->initPlanModules(nh);
+        planner_manager_.reset(new FastPlannerManager(nh));
+//        planner_manager_->initPlanModules(nh);
         visualization_.reset(new PlanningVisualization(nh));
 
         /* callback */
@@ -80,17 +80,15 @@ namespace fast_planner {
         have_odom_ = true;
     }
 
-    void KinoReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call) {
-        string state_str[5] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_"
-                                                                                     "TRAJ"};
+    void KinoReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, const string& pos_call) {
+        string state_str[6] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_","TRAJ"};
         int pre_s = int(exec_state_);
         exec_state_ = new_state;
         cout << "[" + pos_call + "]: from " + state_str[pre_s] + " to " + state_str[int(new_state)] << endl;
     }
 
     void KinoReplanFSM::printFSMExecState() {
-        string state_str[5] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_"
-                                                                                     "TRAJ"};
+        string state_str[6] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_", "TRAJ"};
 
         cout << "[FSM]: state: " + state_str[int(exec_state_)] << endl;
     }
@@ -196,6 +194,8 @@ namespace fast_planner {
                 }
                 break;
             }
+            case REPLAN_NEW:
+                break;
         }
     }
 
@@ -307,7 +307,7 @@ namespace fast_planner {
 
             Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
 
-            for (int i = 0; i < pos_pts.rows(); ++i) {
+            for (size_t i = 0; i < pos_pts.rows(); ++i) {
                 geometry_msgs::Point pt;
                 pt.x = pos_pts(i, 0);
                 pt.y = pos_pts(i, 1);
@@ -316,12 +316,12 @@ namespace fast_planner {
             }
 
             Eigen::VectorXd knots = info->position_traj_.getKnot();
-            for (int i = 0; i < knots.rows(); ++i) {
+            for (size_t i = 0; i < knots.rows(); ++i) {
                 bspline.knots.push_back(knots(i));
             }
 
             Eigen::MatrixXd yaw_pts = info->yaw_traj_.getControlPoint();
-            for (int i = 0; i < yaw_pts.rows(); ++i) {
+            for (size_t i = 0; i < yaw_pts.rows(); ++i) {
                 double yaw = yaw_pts(i, 0);
                 bspline.yaw_pts.push_back(yaw);
             }

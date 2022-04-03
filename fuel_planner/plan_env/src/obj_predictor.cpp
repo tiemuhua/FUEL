@@ -55,11 +55,11 @@ void ObjPredictor::init() {
   obj_scale_.reset(new vector<Eigen::Vector3d>);
   obj_scale_->resize(obj_num_);
   scale_init_.resize(obj_num_);
-  for (int i = 0; i < obj_num_; i++)
+  for (size_t i = 0; i < obj_num_; i++)
     scale_init_[i] = false;
 
   /* subscribe to pose */
-  for (int i = 0; i < obj_num_; i++) {
+  for (size_t i = 0; i < obj_num_; i++) {
     shared_ptr<ObjHistory> obj_his(new ObjHistory);
 
     obj_his->init(i);
@@ -89,7 +89,7 @@ ObjScale ObjPredictor::getObjScale() {
 
 void ObjPredictor::predictPolyFit() {
   /* iterate all obj */
-  for (int i = 0; i < obj_num_; i++) {
+  for (size_t i = 0; i < obj_num_; i++) {
     /* ---------- write A and b ---------- */
     Eigen::Matrix<double, 6, 6> A;
     Eigen::Matrix<double, 6, 1> temp;
@@ -97,7 +97,7 @@ void ObjPredictor::predictPolyFit() {
     vector<Eigen::Matrix<double, 6, 1>> pm(3);
 
     A.setZero();
-    for (int i = 0; i < 3; ++i)
+    for (size_t i = 0; i < 3; ++i)
       bm[i].setZero();
 
     /* ---------- estimation error ---------- */
@@ -109,7 +109,7 @@ void ObjPredictor::predictPolyFit() {
 
       /* A */
       temp << 1.0, ti, pow(ti, 2), pow(ti, 3), pow(ti, 4), pow(ti, 5);
-      for (int j = 0; j < 6; ++j)
+      for (size_t j = 0; j < 6; ++j)
         A.row(j) += 2.0 * pow(ti, j) * temp.transpose();
 
       /* b */
@@ -138,7 +138,7 @@ void ObjPredictor::predictPolyFit() {
     A.row(5) += -4.0 / 7.0 * lambda_ * temp.transpose();
 
     /* ---------- solve ---------- */
-    for (int j = 0; j < 3; j++) {
+    for (size_t j = 0; j < 3; j++) {
       pm[j] = A.colPivHouseholderQr().solve(bm[j]);
     }
 
@@ -162,7 +162,7 @@ void ObjPredictor::markerCallback(const visualization_msgs::MarkerConstPtr& msg)
   scale_init_[idx] = true;
 
   int finish_num = 0;
-  for (int i = 0; i < obj_num_; i++) {
+  for (size_t i = 0; i < obj_num_; i++) {
     if (scale_init_[i]) finish_num++;
   }
 
@@ -172,7 +172,7 @@ void ObjPredictor::markerCallback(const visualization_msgs::MarkerConstPtr& msg)
 }
 
 void ObjPredictor::predictConstVel() {
-  for (int i = 0; i < obj_num_; i++) {
+  for (size_t i = 0; i < obj_num_; i++) {
     /* ---------- get the last two point ---------- */
     list<Eigen::Vector4d> his;
     obj_histories_[i]->getHistory(his);
@@ -204,7 +204,7 @@ void ObjPredictor::predictConstVel() {
     p01 = At12.inverse() * q12;
 
     vector<Eigen::Matrix<double, 6, 1>> polys(3);
-    for (int j = 0; j < 3; ++j) {
+    for (size_t j = 0; j < 3; ++j) {
       polys[j].setZero();
       polys[j].head(2) = p01.col(j);
     }

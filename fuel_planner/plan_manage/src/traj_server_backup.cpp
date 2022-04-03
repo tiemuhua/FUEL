@@ -53,7 +53,7 @@ void displayTrajWithColor(vector<Eigen::Vector3d> traj, double resolution, Eigen
   mk.scale.z = resolution;
 
   geometry_msgs::Point pt;
-  for (int i = 0; i < int(traj.size()); i++) {
+  for (size_t i = 0; i < int(traj.size()); i++) {
     pt.x = traj[i](0);
     pt.y = traj[i](1);
     pt.z = traj[i](2);
@@ -108,10 +108,10 @@ void bsplineCallback(bspline::BsplineConstPtr msg) {
   // parse pos traj
   Eigen::MatrixXd pos_pts(msg->pos_pts.size(), 3);
   Eigen::VectorXd knots(msg->knots.size());
-  for (int i = 0; i < msg->knots.size(); ++i) {
+  for (size_t i = 0; i < msg->knots.size(); ++i) {
     knots(i) = msg->knots[i];
   }
-  for (int i = 0; i < msg->pos_pts.size(); ++i) {
+  for (size_t i = 0; i < msg->pos_pts.size(); ++i) {
     pos_pts(i, 0) = msg->pos_pts[i].x;
     pos_pts(i, 1) = msg->pos_pts[i].y;
     pos_pts(i, 2) = msg->pos_pts[i].z;
@@ -121,7 +121,7 @@ void bsplineCallback(bspline::BsplineConstPtr msg) {
 
   // parse yaw traj
   Eigen::MatrixXd yaw_pts(msg->yaw_pts.size(), 1);
-  for (int i = 0; i < msg->yaw_pts.size(); ++i) {
+  for (size_t i = 0; i < msg->yaw_pts.size(); ++i) {
     yaw_pts(i, 0) = msg->yaw_pts[i];
   }
   NonUniformBspline yaw_traj(yaw_pts, msg->order, msg->yaw_dt);
@@ -170,7 +170,7 @@ void cmdCallback(const ros::TimerEvent& e) {
     Eigen::Vector3d dir(cos(traj_cmd.yaw), sin(traj_cmd.yaw), 0.0);
     drawCmd(traj_cmd.pos, 2 * dir, 2, Eigen::Vector4d(1, 1, 0, 0.7));
 
-    if (executed_cmd_.size() == 0 ||
+    if (executed_cmd_.empty() ||
         (executed_cmd_.size() > 0 && (traj_cmd.pos - executed_cmd_.back()).norm() > 1e-6)) {
       executed_cmd_.push_back(traj_cmd.pos);
       if (executed_cmd_.size() > 10000)

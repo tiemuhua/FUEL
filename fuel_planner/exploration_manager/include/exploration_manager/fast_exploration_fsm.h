@@ -23,56 +23,68 @@ using std::unique_ptr;
 using std::string;
 
 namespace fast_planner {
-class FastPlannerManager;
-class FastExplorationManager;
-class PlanningVisualization;
-struct FSMParam;
-struct FSMData;
+    class FastPlannerManager;
 
-enum EXPL_STATE { INIT, WAIT_TRIGGER, PLAN_TRAJ, PUB_TRAJ, EXEC_TRAJ, FINISH };
+    class FastExplorationManager;
 
-class FastExplorationFSM {
-private:
-  /* planning utils */
-  shared_ptr<FastPlannerManager> planner_manager_;
-  shared_ptr<FastExplorationManager> expl_manager_;
-  shared_ptr<PlanningVisualization> visualization_;
+    class PlanningVisualization;
 
-  shared_ptr<FSMParam> fp_;
-  shared_ptr<FSMData> fd_;
-  EXPL_STATE state_;
+    struct FSMParam;
+    struct FSMData;
 
-  bool classic_;
+    enum EXPL_STATE {
+        INIT, WAIT_TRIGGER, PLAN_TRAJ, PUB_TRAJ, EXEC_TRAJ, FINISH
+    };
 
-  /* ROS utils */
-  ros::NodeHandle node_;
-  ros::Timer exec_timer_, safety_timer_, vis_timer_, frontier_timer_;
-  ros::Subscriber trigger_sub_, odom_sub_;
-  ros::Publisher replan_pub_, new_pub_, bspline_pub_;
+    class FastExplorationFSM {
+    private:
+        /* planning utils */
+        shared_ptr<FastPlannerManager> planner_manager_;
+        shared_ptr<FastExplorationManager> expl_manager_;
+        shared_ptr<PlanningVisualization> visualization_;
 
-  /* helper functions */
-  int callExplorationPlanner();
-  void transitState(EXPL_STATE new_state, string pos_call);
+        shared_ptr<FSMParam> fp_;
+        shared_ptr<FSMData> fd_;
+        EXPL_STATE state_;
 
-  /* ROS functions */
-  void FSMCallback(const ros::TimerEvent& e);
-  void safetyCallback(const ros::TimerEvent& e);
-  void frontierCallback(const ros::TimerEvent& e);
-  void triggerCallback(const nav_msgs::PathConstPtr& msg);
-  void odometryCallback(const nav_msgs::OdometryConstPtr& msg);
-  void visualize();
-  void clearVisMarker();
+        bool classic_{};
 
-public:
-  FastExplorationFSM(/* args */) {
-  }
-  ~FastExplorationFSM() {
-  }
+        /* ROS utils */
+        ros::NodeHandle node_;
+        ros::Timer exec_timer_, safety_timer_, vis_timer_, frontier_timer_;
+        ros::Subscriber trigger_sub_, odom_sub_;
+        ros::Publisher replan_pub_, new_pub_, bspline_pub_;
 
-  void init(ros::NodeHandle& nh);
+        /* helper functions */
+        int callExplorationPlanner();
 
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
+        void transitState(EXPL_STATE new_state, string pos_call);
+
+        /* ROS functions */
+        void FSMCallback(const ros::TimerEvent &e);
+
+        void safetyCallback(const ros::TimerEvent &e);
+
+        void frontierCallback(const ros::TimerEvent &e);
+
+        void triggerCallback(const nav_msgs::PathConstPtr &msg);
+
+        void odometryCallback(const nav_msgs::OdometryConstPtr &msg);
+
+        void visualize();
+
+        void clearVisMarker();
+
+    public:
+        FastExplorationFSM(ros::NodeHandle &nh);
+
+        ~FastExplorationFSM() {
+        }
+
+//        void init(ros::NodeHandle &nh);
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    };
 
 }  // namespace fast_planner
 

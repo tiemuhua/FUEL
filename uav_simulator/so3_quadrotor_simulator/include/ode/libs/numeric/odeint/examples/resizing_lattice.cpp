@@ -48,7 +48,7 @@ struct compacton_lattice {
     // dp_i/dt = - V_i * q_i^3 - beta*(q_i - q_{i-1})^3 + beta*(q_{i+1} - q_i)^3
     const int N = q.size();
     double diff = q[0] - q[N - 1];
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       dpdt[i] = -m_pot[m_pot_start_index + i] * q[i] * q[i] * q[i] - m_beta * diff * diff * diff;
       diff = q[(i + 1) % N] - q[i];
       dpdt[i] += m_beta * diff * diff * diff;

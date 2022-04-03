@@ -310,7 +310,7 @@ void MultiProbMapDisplay::update(float wall_dt, float ros_dt) {
     if (draw_under_property_->getValue().toBool())
       manual_object_.back()->setRenderQueueGroup(Ogre::RENDER_QUEUE_4);
 
-    // for (int i = 0; i < 4; i++)
+    // for (size_t i = 0; i < 4; i++)
     //  dt[i] += (t[i+1] - t[i]).toSec();
   }
   loaded_ = true;

@@ -53,7 +53,7 @@
   vector<ViewNode::Ptr> path;
   graph_search.DijkstraSearch(v0->id_, v3->id_, path);
   std::cout << "path size: " << path.size() << std::endl;
-  for (int i = 0; i < path.size(); ++i)
+  for (size_t i = 0; i < path.size(); ++i)
   {
     std::cout << "node id: " << path[i]->id_ << std::endl;
   }

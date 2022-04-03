@@ -149,7 +149,7 @@ struct perform_integrate_times_test {
     std::vector<double> times;
 
     std::vector<double> obs_times(abs(n));
-    for (int i = 0;
+    for (size_t i = 0;
          boost::numeric::odeint::detail::less_with_sign(i, static_cast<int>(obs_times.size()), dt);
          i += dn) {
       obs_times[i] = i;

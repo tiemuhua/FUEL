@@ -162,7 +162,7 @@ void GameLikeInput::sendMessage() {
   //! @note go through arrow_array, get the internal parameter of each array
   //! makeup each waypoint
 
-  for (int i = 0; i < arrow_array.size(); ++i) {
+  for (size_t i = 0; i < arrow_array.size(); ++i) {
     rviz::Arrow* p_a = arrow_array[i];
     geometry_msgs::PoseStamped ps;
 

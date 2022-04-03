@@ -75,7 +75,7 @@ public:
 
   void setNextFrontier(const int& id);
   bool isFrontierCovered();
-  void wrapYaw(double& yaw);
+  static void wrapYaw(double& yaw);
 
   shared_ptr<PerceptionUtils> percep_utils_;
 
@@ -84,7 +84,7 @@ private:
   bool splitHorizontally(const Frontier& frontier, list<Frontier>& splits);
   void mergeFrontiers(Frontier& ftr1, const Frontier& ftr2);
   bool isFrontierChanged(const Frontier& ft);
-  bool haveOverlap(const Vector3d& min1, const Vector3d& max1, const Vector3d& min2,
+  static bool haveOverlap(const Vector3d& min1, const Vector3d& max1, const Vector3d& min2,
                    const Vector3d& max2);
   void computeFrontierInfo(Frontier& frontier);
   void downsample(const vector<Vector3d>& cluster_in, vector<Vector3d>& cluster_out);
