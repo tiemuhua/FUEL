@@ -38,40 +38,16 @@ namespace fast_planner {
 
         cout << "kino origin_: " << origin_.transpose() << endl;
         cout << "kino map size: " << map_size_3d_.transpose() << endl;
-
-        /* ---------- pre-allocated node ---------- */
-        path_node_pool_.resize(allocate_num_);
-        for (size_t i = 0; i < allocate_num_; i++) {
-            path_node_pool_[i] = std::make_shared<PathNode>();
-        }
-
-        use_node_num_ = 0;
-        iter_num_ = 0;
     }
-
-    void KinodynamicAstar::reset() {
-        path_nodes_.clear();
-
-        for (size_t i = 0; i < use_node_num_; i++) {
-            PathNodePtr node = path_node_pool_[i];
-            node->parent = nullptr;
-            node->node_state = NOT_EXPAND;
-        }
-
-        use_node_num_ = 0;
-        iter_num_ = 0;
-        is_shot_succ_ = false;
-    }
-
 
     int KinodynamicAstar::search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v,
                                  const Eigen::Vector3d &start_a,
-                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, bool init_search,
-                                 const bool dynamic,
-                                 double time_start) {
-        start_vel_ = start_v;
-
-        PathNodePtr cur_node = path_node_pool_[0];
+                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
+                                 const bool dynamic, const double time_start,
+                                 bool init_search,
+                                 vector<PathNodePtr> &path,
+                                 bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time) {
+        PathNodePtr cur_node = make_shared<PathNode>();
         cur_node->parent = nullptr;
         cur_node->state.head(3) = start_pt;
         cur_node->state.tail(3) = start_v;
@@ -89,7 +65,7 @@ namespace fast_planner {
         cur_node->node_state = IN_OPEN_SET;
         std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> open_set;
         open_set.push(cur_node);
-        use_node_num_ += 1;
+        int use_node_num = 1;
         NodeHashTable expanded_nodes;
 
         if (dynamic) {
@@ -102,11 +78,12 @@ namespace fast_planner {
 
         const int tolerance = ceil(1 / resolution_);
 
+        int iter_num = 0;
         while (!open_set.empty()) {
             cur_node = open_set.top();
             open_set.pop();
             cur_node->node_state = IN_CLOSE_SET;
-            iter_num_ += 1;
+            iter_num += 1;
 
             // Terminate?
             bool reach_horizon = (cur_node->state.head(3) - start_pt).norm() >= horizon_;
@@ -114,19 +91,16 @@ namespace fast_planner {
                             abs(cur_node->index(1) - end_index(1)) <= tolerance &&
                             abs(cur_node->index(2) - end_index(2)) <= tolerance;
             if (reach_horizon || near_end) {
-                path_nodes_ = move(retrievePath(cur_node));
-                for (auto node:path_nodes_) {
-                    cout << "path node input\t"<<node->input.transpose()<<endl;
-                }
+                path = move(retrievePath(cur_node));
                 if (near_end) {
                     // Check whether shot traj exist
-                    estimateHeuristic(cur_node->state, end_state, time_to_goal);
-                    computeShotTraj(cur_node->state, end_state, time_to_goal);
+                    estimateHeuristic(cur_node->state, end_state, shot_time);
+                    is_shot_succ = computeShotTraj(cur_node->state, end_state, shot_time, coef_shot);
                     if (init_search) ROS_ERROR("Shot in first search loop!");
                 }
             }
             if (reach_horizon) {
-                if (is_shot_succ_) {
+                if (is_shot_succ) {
                     std::cout << "reach end" << std::endl;
                     return REACH_END;
                 } else {
@@ -136,7 +110,7 @@ namespace fast_planner {
             }
 
             if (near_end) {
-                if (is_shot_succ_) {
+                if (is_shot_succ) {
                     std::cout << "reach end" << std::endl;
                     return REACH_END;
                 } else if (cur_node->parent) {
@@ -175,7 +149,6 @@ namespace fast_planner {
 
             // cout << "cur state:" << cur_state.head(3).transpose() << endl;
             for (const Vector3d &input: inputs) {
-                cout << "input.transpose()\t" << input.transpose() << endl;
                 for (double tau: durations) {
                     stateTransit(cur_state, pro_state, input, tau);
                     pro_t = cur_node->time + tau;
@@ -261,7 +234,7 @@ namespace fast_planner {
 
                     // This node end up in a voxel different from others
                     if (!pro_node) {
-                        pro_node = path_node_pool_[use_node_num_];
+                        pro_node = std::make_shared<PathNode>();
                         pro_node->index = pro_id;
                         pro_node->state = pro_state;
                         pro_node->f_score = tmp_f_score;
@@ -283,8 +256,8 @@ namespace fast_planner {
 
                         tmp_expand_nodes.push_back(pro_node);
 
-                        use_node_num_ += 1;
-                        if (use_node_num_ == allocate_num_) {
+                        use_node_num += 1;
+                        if (use_node_num == allocate_num_) {
                             cout << "run out of memory." << endl;
                             return NO_PATH;
                         }
@@ -307,8 +280,8 @@ namespace fast_planner {
         }
 
         cout << "open set empty, no path!" << endl;
-        cout << "use node num: " << use_node_num_ << endl;
-        cout << "iter num: " << iter_num_ << endl;
+        cout << "use node num: " << use_node_num << endl;
+        cout << "iter num: " << iter_num << endl;
         return NO_PATH;
     }
 
@@ -357,26 +330,26 @@ namespace fast_planner {
         return 1.0 * (1 + tie_breaker_) * cost;
     }
 
-    bool KinodynamicAstar::computeShotTraj(Eigen::VectorXd state1, Eigen::VectorXd state2,
-                                           double time_to_goal) {
+    bool KinodynamicAstar::computeShotTraj(const Eigen::VectorXd &state1, const Eigen::VectorXd &state2,
+                                           const double time_to_goal,
+                                           Eigen::MatrixXd &coef_shot) {
         /* ---------- get coefficient ---------- */
         const Vector3d p0 = state1.head(3);
         const Vector3d dp = state2.head(3) - p0;
         const Vector3d v0 = state1.segment(3, 3);
         const Vector3d v1 = state2.segment(3, 3);
         const Vector3d dv = v1 - v0;
-        double t_d = time_to_goal;
-        MatrixXd coef(3, 4);
-        end_vel_ = v1;
+        coef_shot = MatrixXd::Zero(3, 4);
 
-        Vector3d a = 1.0 / 6.0 * (-12.0 / (t_d * t_d * t_d) * (dp - v0 * t_d) + 6 / (t_d * t_d) * dv);
-        Vector3d b = 0.5 * (6.0 / (t_d * t_d) * (dp - v0 * t_d) - 2 / t_d * dv);
+        Vector3d a = 1.0 / 6.0 * (-12.0 / (time_to_goal * time_to_goal * time_to_goal) * (dp - v0 * time_to_goal) +
+                                  6 / (time_to_goal * time_to_goal) * dv);
+        Vector3d b = 0.5 * (6.0 / (time_to_goal * time_to_goal) * (dp - v0 * time_to_goal) - 2 / time_to_goal * dv);
         const Vector3d &c = v0;
         const Vector3d &d = p0;
 
         // 1/6 * alpha * t^3 + 1/2 * beta * t^2 + v0
         // a*t^3 + b*t^2 + v0*t + p0
-        coef.col(3) = a, coef.col(2) = b, coef.col(1) = c, coef.col(0) = d;
+        coef_shot.col(3) = a, coef_shot.col(2) = b, coef_shot.col(1) = c, coef_shot.col(0) = d;
 
         Vector3d coord, vel, acc;
         VectorXd poly1d, t, polyv, polya;
@@ -386,21 +359,21 @@ namespace fast_planner {
         Tm << 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0;
 
         /* ---------- forward checking of trajectory ---------- */
-        double t_delta = t_d / 10;
-        for (double time = t_delta; time <= t_d; time += t_delta) {
+        double t_delta = time_to_goal / 10;
+        for (double time = t_delta; time <= time_to_goal; time += t_delta) {
             t = VectorXd::Zero(4);
             for (Eigen::Index j = 0; j < 4; j++)
                 t(j) = pow(time, j);
 
             for (int dim = 0; dim < 3; dim++) {
-                poly1d = coef.row(dim);
+                poly1d = coef_shot.row(dim);
                 coord(dim) = poly1d.dot(t);
                 vel(dim) = (Tm * poly1d).dot(t);
                 acc(dim) = (Tm * Tm * poly1d).dot(t);
 
                 if (fabs(vel(dim)) > max_vel_ || fabs(acc(dim)) > max_acc_) {
-                     cout << "vel:" << vel(dim) << ", acc:" << acc(dim) << endl;
-                     return false;
+                    cout << "vel:" << vel(dim) << ", acc:" << acc(dim) << endl;
+                    return false;
                 }
             }
 
@@ -410,13 +383,11 @@ namespace fast_planner {
                 return false;
             }
 
-            if (edt_environment_->sdf_map_->getInflateOccupancy(coord) == SDFMap::OCCUPIED) { // todo free or occupy?????
+            if (edt_environment_->sdf_map_->getInflateOccupancy(coord) ==
+                SDFMap::OCCUPIED) { // todo free or occupy?????
                 return false;
             }
         }
-        coef_shot_ = coef;
-        t_shot_ = t_d;
-        is_shot_succ_ = true;
         return true;
     }
 
@@ -484,13 +455,14 @@ namespace fast_planner {
         return dts;
     }
 
-    std::vector<Eigen::Vector3d> KinodynamicAstar::getKinoTraj() {
+    std::vector<Eigen::Vector3d> KinodynamicAstar::getKinoTraj(const vector<PathNodePtr> &path,
+                                                               const bool is_shot_succ, const Eigen::MatrixXd &coef_shot, const double t_shot) {
         const double delta_t = 0.01;
 
         vector<Vector3d> state_list;
 
         /* ---------- get traj of searching ---------- */
-        for (const PathNodePtr &node: path_nodes_) {
+        for (const PathNodePtr &node: path) {
             Vector3d input = node->input;
             double duration = node->duration;
             Matrix<double, 6, 1> x0 = node->state, xt;
@@ -501,16 +473,16 @@ namespace fast_planner {
         }
 
         /* ---------- get traj of one shot ---------- */
-        if (is_shot_succ_) {
+        if (is_shot_succ) {
             Vector3d coord;
             VectorXd poly1d, time(4);
 
-            for (double t = delta_t; t <= t_shot_; t += delta_t) {
+            for (double t = delta_t; t <= t_shot; t += delta_t) {
                 for (Eigen::Index j = 0; j < 4; j++)
                     time(j) = pow(t, j);
 
                 for (int dim = 0; dim < 3; dim++) {
-                    poly1d = coef_shot_.row(dim);
+                    poly1d = coef_shot.row(dim);
                     coord(dim) = poly1d.dot(time);
                 }
                 state_list.push_back(coord);
@@ -520,16 +492,19 @@ namespace fast_planner {
         return state_list;
     }
 
-    void KinodynamicAstar::getSamples(double &ts, vector<Eigen::Vector3d> &point_set,
+    void KinodynamicAstar::getSamples(const vector<PathNodePtr> &path,
+                                      const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
+                                      const bool is_shot_succ, const Eigen::MatrixXd &coef_shot, const double t_shot,
+                                      double &ts, vector<Eigen::Vector3d> &point_set,
                                       vector<Eigen::Vector3d> &start_end_derivatives) {
         /* ---------- path duration ---------- */
 
         double sum_t = 0;
-        for (const PathNodePtr &node: path_nodes_) {
+        for (const PathNodePtr &node: path) {
             sum_t += node->duration;
         }
-        if (is_shot_succ_) {
-            sum_t += t_shot_;
+        if (is_shot_succ) {
+            sum_t += t_shot;
         }
 
         int seg_num = floor(sum_t / ts);
@@ -537,7 +512,7 @@ namespace fast_planner {
         ts = sum_t / seg_num;
         double t_from_pre_node = ts;
 
-        for (const PathNodePtr &node: path_nodes_) {
+        for (const PathNodePtr &node: path) {
             Eigen::Matrix<double, 6, 1> x0 = node->state, xt;
             Vector3d input = node->input;
             while (t_from_pre_node < node->duration) {
@@ -548,8 +523,8 @@ namespace fast_planner {
             t_from_pre_node -= node->duration;
         }
 
-        if (is_shot_succ_) {
-            while (t_from_pre_node < t_shot_) {
+        if (is_shot_succ) {
+            while (t_from_pre_node < t_shot) {
                 Vector3d coord;
                 Vector4d poly1d, time;
 
@@ -557,7 +532,7 @@ namespace fast_planner {
                     time(j) = pow(t_from_pre_node, j);
 
                 for (int dim = 0; dim < 3; dim++) {
-                    poly1d = coef_shot_.row(dim);
+                    poly1d = coef_shot.row(dim);
                     coord(dim) = poly1d.dot(time);
                 }
 
@@ -568,37 +543,37 @@ namespace fast_planner {
 
         // Calculate boundary vel and acc
         Eigen::Vector3d end_vel, end_acc;
-        if (is_shot_succ_) {
-            end_vel = end_vel_;
+        if (is_shot_succ) {
+            end_vel = end_v;
             for (int dim = 0; dim < 3; ++dim) {
-                Vector4d coe = coef_shot_.row(dim);
-                end_acc(dim) = 2 * coe(2) + 6 * coe(3) * t_shot_;
+                Vector4d coe = coef_shot.row(dim);
+                end_acc(dim) = 2 * coe(2) + 6 * coe(3) * t_shot;
             }
         } else {
-            end_vel = path_nodes_.back()->state.tail(3);
-            end_acc = path_nodes_.back()->input;
+            end_vel = path.back()->state.tail(3);
+            end_acc = path.back()->input;
         }
 
         // calculate start acc
         Eigen::Vector3d start_acc;
-        if (path_nodes_.empty()) {
+        if (path.empty()) {
             // no searched traj, calculate by shot traj
-            start_acc = 2 * coef_shot_.col(2);
+            start_acc = 2 * coef_shot.col(2);
             cout << "path nodes empty\n";
         } else {
             // input of searched traj
-            start_acc = path_nodes_.front()->input;
+            start_acc = path.front()->input;
             cout << "path nodes not empty\n";
         }
 
-        start_end_derivatives.push_back(start_vel_);
+        start_end_derivatives.push_back(start_v);
         start_end_derivatives.push_back(end_vel);
         start_end_derivatives.push_back(start_acc);
         start_end_derivatives.push_back(end_acc);
 
         cout << "get sample start end derivatives\n";
-        for (auto d:start_end_derivatives) {
-            cout << d.transpose()<<endl;
+        for (auto d: start_end_derivatives) {
+            cout << d.transpose() << endl;
         }
     }
 

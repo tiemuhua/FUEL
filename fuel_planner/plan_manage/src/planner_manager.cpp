@@ -123,36 +123,37 @@ namespace fast_planner {
         /******************************
          * Kinodynamic path searching *
          ******************************/
-        kino_path_finder_->reset();
-        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, true);
+        vector<PathNodePtr> path;
+        double shot_time;
+        Eigen::MatrixXd coef_shot;
+        bool is_shot_succ;
+
+        const bool dynamic = false;
+        const double time_start = -1.0;
+
+        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, dynamic, time_start,
+                                               true, path, is_shot_succ, coef_shot, shot_time);
         if (status == KinodynamicAstar::NO_PATH) {
             ROS_ERROR("search 1 fail");
-            // Retry
-            kino_path_finder_->reset();
-            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, false);
+            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, dynamic, time_start,
+                                               false, path, is_shot_succ, coef_shot, shot_time);
             if (status == KinodynamicAstar::NO_PATH) {
                 cout << "[Kino replan]: Can't find path." << endl;
                 return false;
             }
         }
-        plan_data_.kino_path_ = kino_path_finder_->getKinoTraj();
+        plan_data_.kino_path_ = KinodynamicAstar::getKinoTraj(path, is_shot_succ, coef_shot, shot_time);
 
         /*********************************
          * Parameterize path to B-spline *
          *********************************/
         double ts = pp_.ctrl_pt_dist / pp_.max_vel_;
         vector<Eigen::Vector3d> point_set, start_end_derivatives;
-        kino_path_finder_->getSamples(ts, point_set, start_end_derivatives);
-        cout << "point set sampled\n";
-        for (auto point:point_set) {
-            cout << point.transpose() <<endl;
-        }
+        KinodynamicAstar::getSamples(path, start_vel, end_vel, is_shot_succ, coef_shot, shot_time, ts, point_set, start_end_derivatives);
         Eigen::MatrixXd ctrl_pts;
         NonUniformBspline::parameterizeToBspline(
                 ts, point_set, start_end_derivatives, pp_.bspline_degree_, ctrl_pts);
-        NonUniformBspline init(ctrl_pts, pp_.bspline_degree_, ts);
-        cout << "control points\n";
-        cout << ctrl_pts <<endl;
+        NonUniformBspline init_bspline(ctrl_pts, pp_.bspline_degree_, ts);
 
         /*********************************
          * B-spline-based optimization   *
@@ -160,7 +161,7 @@ namespace fast_planner {
         int cost_function = BsplineOptimizer::NORMAL_PHASE;
         if (pp_.min_time_) cost_function |= BsplineOptimizer::MINTIME;
         vector<Eigen::Vector3d> start, end;
-        init.getBoundaryStates(2, 0, start, end);
+        init_bspline.getBoundaryStates(2, 0, start, end);
         bspline_optimizers_[0]->setBoundaryStates(start, end);
         if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
         bspline_optimizers_[0]->optimize(ctrl_pts, ts, cost_function, 1, 1);
@@ -182,13 +183,13 @@ namespace fast_planner {
         if (tour.empty()) ROS_ERROR("Empty path to traj planner");
 
         // Generate traj through waypoints-based method
-        const int pt_num = tour.size();
+        const size_t pt_num = tour.size();
         Eigen::MatrixXd pos(pt_num, 3);
-        for (size_t i = 0; i < pt_num; ++i) pos.row(i) = tour[i];
+        for (Eigen::Index i = 0; i < pt_num; ++i) pos.row(i) = tour[i];
 
         Eigen::Vector3d zero(0, 0, 0);
         Eigen::VectorXd times(pt_num - 1);
-        for (size_t i = 0; i < pt_num - 1; ++i)
+        for (Eigen::Index i = 0; i < pt_num - 1; ++i)
             times(i) = (pos.row(i + 1) - pos.row(i)).norm() / (pp_.max_vel_ * 0.5);
 
         PolynomialTraj init_traj;
@@ -266,13 +267,13 @@ namespace fast_planner {
             inter_points.insert(inter_points.begin() + 1, mid);
         }
 
-        int pt_num = inter_points.size();
+        auto pt_num = (Eigen::Index)inter_points.size();
         Eigen::MatrixXd pos(pt_num, 3);
-        for (size_t i = 0; i < pt_num; ++i) pos.row(i) = inter_points[i];
+        for (Eigen::Index i = 0; i < pt_num; ++i) pos.row(i) = inter_points[i];
 
         Eigen::Vector3d zero(0, 0, 0);
         Eigen::VectorXd time(pt_num - 1);
-        for (size_t i = 0; i < pt_num - 1; ++i)
+        for (Eigen::Index i = 0; i < pt_num - 1; ++i)
             time(i) = (pos.row(i + 1) - pos.row(i)).norm() / (pp_.max_vel_ * 0.5);
 
         time(0) += pp_.max_vel_ / (2 * pp_.max_acc_);

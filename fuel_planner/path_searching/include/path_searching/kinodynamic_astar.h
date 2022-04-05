@@ -52,7 +52,7 @@ namespace fast_planner {
 
     class NodeComparator {
     public:
-        bool operator()(const PathNodePtr& node1, const PathNodePtr& node2) {
+        bool operator()(const PathNodePtr &node1, const PathNodePtr &node2) {
             return node1->f_score > node2->f_score;
         }
     };
@@ -68,15 +68,15 @@ namespace fast_planner {
 
         ~NodeHashTable() = default;
 
-        void insert(const Eigen::Vector3i& idx, const PathNodePtr& node) {
+        void insert(const Eigen::Vector3i &idx, const PathNodePtr &node) {
             data_3d_.insert(std::make_pair(idx, node));
         }
 
-        void insert(Eigen::Vector3i idx, int time_idx, const PathNodePtr& node) {
+        void insert(Eigen::Vector3i idx, int time_idx, const PathNodePtr &node) {
             data_4d_.insert(std::make_pair(Eigen::Vector4i(idx(0), idx(1), idx(2), time_idx), node));
         }
 
-        PathNodePtr find(const Eigen::Vector3i& idx) {
+        PathNodePtr find(const Eigen::Vector3i &idx) {
             auto iter = data_3d_.find(idx);
             return iter == data_3d_.end() ? nullptr : iter->second;
         }
@@ -95,16 +95,9 @@ namespace fast_planner {
     class KinodynamicAstar {
     private:
         /* ---------- main data structure ---------- */
-        vector<PathNodePtr> path_node_pool_;
-        int use_node_num_, iter_num_;
-        std::vector<PathNodePtr> path_nodes_;
 
         /* ---------- record data ---------- */
-        Eigen::Vector3d start_vel_, end_vel_;
         EDTEnvironment::Ptr edt_environment_;
-        bool is_shot_succ_ = false;
-        Eigen::MatrixXd coef_shot_;
-        double t_shot_{};
 
         /* ---------- parameter ---------- */
         /* search */
@@ -121,7 +114,7 @@ namespace fast_planner {
         double time_origin_{};
 
         /* helper */
-        Eigen::Vector3i posToIndex(const Eigen::Vector3d& pt);
+        Eigen::Vector3i posToIndex(const Eigen::Vector3d &pt);
 
         int timeToIndex(double time) const;
 
@@ -132,13 +125,14 @@ namespace fast_planner {
 
         static vector<double> quartic(double a, double b, double c, double d, double e);
 
-        bool computeShotTraj(Eigen::VectorXd state1, Eigen::VectorXd state2, double time_to_goal);
+        bool computeShotTraj(const Eigen::VectorXd &state1, const Eigen::VectorXd &state2, double time_to_goal,
+                             Eigen::MatrixXd &coef_shot);
 
-        double estimateHeuristic(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, double &optimal_time) const;
+        double estimateHeuristic(const Eigen::VectorXd &x1, const Eigen::VectorXd &x2, double &optimal_time) const;
 
         /* state propagation */
         static void stateTransit(Eigen::Matrix<double, 6, 1> &state0, Eigen::Matrix<double, 6, 1> &state1,
-                          const Eigen::Vector3d& um, double tau);
+                                 const Eigen::Vector3d &um, double tau);
 
     public:
         KinodynamicAstar(ros::NodeHandle &nh, const EDTEnvironment::Ptr &env);
@@ -148,16 +142,24 @@ namespace fast_planner {
         };
 
         /* main API */
-        void reset();
+        int search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
+                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
+                   bool dynamic, double time_start,
+                   bool init_search,
+                   vector<PathNodePtr> &path,
+                   bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);
 
-        int search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& start_v, const Eigen::Vector3d& start_a,
-                   const Eigen::Vector3d& end_pt, const Eigen::Vector3d& end_v, bool init, bool dynamic = false,
-                   double time_start = -1.0);
+        static std::vector<Eigen::Vector3d> getKinoTraj(const vector<PathNodePtr> &path,
+                                                        bool is_shot_succ, const Eigen::MatrixXd &coef_shot,
+                                                        double t_shot);
 
-        std::vector<Eigen::Vector3d> getKinoTraj();
-
-        void getSamples(double &ts, vector<Eigen::Vector3d> &point_set,
-                        vector<Eigen::Vector3d> &start_end_derivatives);
+        static void getSamples(const vector<PathNodePtr> &path,
+                               const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
+                               bool is_shot_succ,
+                               const Eigen::MatrixXd &coef_shot,
+                               double t_shot,
+                               double &ts, vector<Eigen::Vector3d> &point_set,
+                               vector<Eigen::Vector3d> &start_end_derivatives);
 
         typedef shared_ptr<KinodynamicAstar> Ptr;
 
