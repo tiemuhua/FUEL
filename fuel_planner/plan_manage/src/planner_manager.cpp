@@ -526,7 +526,7 @@ namespace fast_planner {
         double t_s = -1.0, t_e;
         for (double tc = t_m; tc <= t_mp + 1e-4; tc += 0.05) {
             Eigen::Vector3d ptc = initial_traj->evaluateDeBoor(tc);
-            safe = !(edt_environment_->evaluateCoarseEDT(ptc, -1.0) < topo_prm_->clearance_);
+            safe = edt_environment_->evaluateCoarseEDT(ptc, -1.0) >= topo_prm_->clearance_;
 
             if (last_safe && !safe) {
                 colli_start.emplace_back(initial_traj->evaluateDeBoor(tc - 0.05));
@@ -585,7 +585,7 @@ namespace fast_planner {
 
         // seg_num -> seg_num - 1 points for constraint excluding the boundary states
 
-        for (size_t i = 0; i < seg_num; ++i) {
+        for (int i = 0; i < seg_num; ++i) {
             double tc = i * dt_yaw;
             Eigen::Vector3d pc = pos.evaluateDeBoorT(tc);
             double tf = min(duration, tc + forward_t);

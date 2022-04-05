@@ -439,7 +439,7 @@ namespace fast_planner {
 
         size_t end_idx = q.size() - order_;
 
-        for (int i = order_; i < end_idx; i++) {
+        for (Eigen::Index i = order_; i < end_idx; i++) {
             Eigen::Vector3d gpt = guide_pts_[i - order_];
             cost += (q[i] - gpt).squaredNorm();
             gradient_q[i] += 2 * (q[i] - gpt);
@@ -495,7 +495,7 @@ namespace fast_planner {
         for (size_t i = 0; i < point_num_; ++i) {
             for (Eigen::Index j = 0; j < dim_; ++j)
                 g_q_[i][j] = x[dim_ * i + j];
-            for (int j = dim_; j < 3; ++j)
+            for (Eigen::Index j = dim_; j < 3; ++j)
                 g_q_[i][j] = 0.0;
         }
         const double dt = optimize_time_ ? x[variable_num_ - 1] : knot_span_;
@@ -552,7 +552,7 @@ namespace fast_planner {
             double f_end = 0.0, gt_end = 0.0;
             calcEndCost(g_q_, dt, f_end, g_end_, gt_end);
             f_combine += ld_end_ * f_end;
-            for (int i = point_num_ - 3; i < point_num_; i++)
+            for (Eigen::Index i = point_num_ - 3; i < point_num_; i++)
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_end_ * g_end_[i](j);
             if (optimize_time_) grad[variable_num_ - 1] += ld_end_ * gt_end;

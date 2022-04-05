@@ -316,7 +316,7 @@ namespace fast_planner {
         double cost = 100000000;
         double t_d = t_bar;
 
-        for (auto t: ts) {
+        for (const double t: ts) {
             if (t < t_bar) continue;
             double c = -c1 / (3 * t * t * t) - c2 / (2 * t * t) - c3 / t + w_time_ * t;
             if (c < cost) {
@@ -383,8 +383,7 @@ namespace fast_planner {
                 return false;
             }
 
-            if (edt_environment_->sdf_map_->getInflateOccupancy(coord) ==
-                SDFMap::OCCUPIED) { // todo free or occupy?????
+            if (edt_environment_->sdf_map_->getInflateOccupancy(coord) == SDFMap::OCCUPIED) {
                 return false;
             }
         }

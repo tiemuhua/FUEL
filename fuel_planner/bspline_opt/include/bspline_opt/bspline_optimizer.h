@@ -92,7 +92,7 @@ namespace fast_planner {
         double knot_span_{};                // B-spline knot span
 
         // Input to solver
-        int dim_{};  // dimension of the B-spline
+        Eigen::Index dim_{};  // dimension of the B-spline
         vector<Eigen::Vector3d> start_state_, end_state_;
         vector<Eigen::Vector3d> guide_pts_;  // geometric guiding path points, N-6
         vector<Eigen::Vector3d> waypoints_;  // waypts constraints
@@ -104,7 +104,7 @@ namespace fast_planner {
         double start_time_{};  // global time for moving obstacles
 
         /* Parameters of optimization  */
-        int order_{};  // bspline degree
+        Eigen::Index order_{};  // bspline degree
         int bspline_degree_{};
         double ld_smooth_{}, ld_dist_{}, ld_feasi_{}, ld_start_{}, ld_end_{}, ld_guide_{}, ld_waypt_{}, ld_view_{}, ld_time_{};
         double dist0_{};              // safe distance
@@ -119,8 +119,8 @@ namespace fast_planner {
         vector<Eigen::Vector3d> g_q_, g_smoothness_, g_distance_, g_feasibility_, g_start_, g_end_, g_guide_,
                 g_waypoints_, g_view_, g_time_;
 
-        int variable_num_{};                    // optimization variables
-        int point_num_{};
+        Eigen::Index variable_num_{};                    // optimization variables
+        Eigen::Index point_num_{};
         bool optimize_time_{};
         int iter_num_{};                        // iteration of the solver
         std::vector<double> best_variable_;
