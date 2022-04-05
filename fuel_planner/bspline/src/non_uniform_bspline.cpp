@@ -60,7 +60,7 @@ namespace fast_planner {
         // [uk,uk+1] is controlled by q[k-p]...q[k], retrieve the associated points
         vector<Eigen::VectorXd> d;
         for (size_t i = 0; i <= p_; ++i)
-            d.push_back(control_points_.row(k - p_ + i));
+            d.emplace_back(control_points_.row(k - p_ + i));
 
         for (int r = 1; r <= p_; ++r)
             for (int i = p_; i >= r; --i) {
@@ -79,7 +79,7 @@ namespace fast_planner {
         Eigen::MatrixXd ctp = Eigen::MatrixXd::Zero(control_points_.rows() - 1, control_points_.cols());
 
         // Control point Qi = p_*(Pi+1-Pi)/(ui+p_+1-ui+1)
-        for (size_t i = 0; i < ctp.rows(); ++i)
+        for (Eigen::Index i = 0; i < ctp.rows(); ++i)
             ctp.row(i) =
                     p_ * (control_points_.row(i + 1) - control_points_.row(i)) / (u_(i + p_ + 1) - u_(i + 1));
         return ctp;
@@ -191,12 +191,12 @@ namespace fast_planner {
         }
 
         // Number of waypoint constraints
-        int K = point_set.size();
+        auto K = (Eigen::Index) point_set.size();
 
         // Solve control points of B-spline (of different degree)
-        // The matrix representation is detailed in "General matrix representations for B-splines, Qin,
-        // Kaihuai"
+        // The matrix representation is detailed in "General matrix representations for B-splines, Qin, Kaihuai"
         Eigen::MatrixXd A = Eigen::MatrixXd::Zero(K + 4, K + degree - 1);
+        cout << "A size\t" << A.size() << endl;
         Eigen::VectorXd bx(K + 4), by(K + 4), bz(K + 4);
         ctrl_pts.resize(K + degree - 1, 3);
 
@@ -206,7 +206,7 @@ namespace fast_planner {
             Eigen::Vector3d pt_to_vel = 1 / (2 * ts) * Eigen::Vector3d(-1, 0, 1);
             Eigen::Vector3d pt_to_acc = 1 / (ts * ts) * Eigen::Vector3d(1, -2, 1);
 
-            for (size_t i = 0; i < K; ++i)
+            for (Eigen::Index i = 0; i < K; ++i)
                 A.block<1, 3>(i, i) = pt_to_pos.transpose();
             A.block<1, 3>(K, 0) = pt_to_vel.transpose();
             A.block<1, 3>(K + 1, K - 1) = pt_to_vel.transpose();
@@ -218,7 +218,7 @@ namespace fast_planner {
             Eigen::Vector4d pt_to_vel = 1 / (6 * ts) * Eigen::Vector4d(-1, -3, 3, 1);
             Eigen::Vector4d pt_to_acc = 1 / (2 * ts * ts) * Eigen::Vector4d(1, -1, -1, 1);
 
-            for (size_t i = 0; i < K; ++i)
+            for (Eigen::Index i = 0; i < K; ++i)
                 A.block<1, 4>(i, i) = pt_to_pos.transpose();
             A.block<1, 4>(K, 0) = pt_to_vel.transpose();
             A.block<1, 4>(K + 1, K - 1) = pt_to_vel.transpose();
@@ -233,7 +233,7 @@ namespace fast_planner {
             pt_to_acc << 1, 2, -6, 2, 1;
             pt_to_acc /= (6 * ts * ts);
 
-            for (size_t i = 0; i < K; ++i)
+            for (Eigen::Index i = 0; i < K; ++i)
                 A.block<1, 5>(i, i) = pt_to_pos.transpose();
             A.block<1, 5>(K, 0) = pt_to_vel.transpose();
             A.block<1, 5>(K + 1, K - 1) = pt_to_vel.transpose();
@@ -241,17 +241,17 @@ namespace fast_planner {
             A.block<1, 5>(K + 3, K - 1) = pt_to_acc.transpose();
         }
 
-        // cout << fixed << setprecision(2) << endl;
-        // std::cout << "A:" << std::endl;
-        // std::cout << A << std::endl;
+        cout << fixed << setprecision(3) << endl;
+        std::cout << "A:" << std::endl;
+        std::cout << A << std::endl;
 
         // K Waypoints and 4 boundary derivative
-        for (size_t i = 0; i < K; ++i) {
+        for (Eigen::Index i = 0; i < K; ++i) {
             bx(i) = point_set[i][0];
             by(i) = point_set[i][1];
             bz(i) = point_set[i][2];
         }
-        for (size_t i = 0; i < 4; ++i) {
+        for (Eigen::Index i = 0; i < 4; ++i) {
             bx(K + i) = start_end_derivative[i][0];
             by(K + i) = start_end_derivative[i][1];
             bz(K + i) = start_end_derivative[i][2];
@@ -261,7 +261,7 @@ namespace fast_planner {
         ctrl_pts.col(0) = A.colPivHouseholderQr().solve(bx);
         ctrl_pts.col(1) = A.colPivHouseholderQr().solve(by);
         ctrl_pts.col(2) = A.colPivHouseholderQr().solve(bz);
-        // cout << "[B-spline]: parameterization ok." << endl;
+        cout << "[B-spline]: parameterization ok." << endl;
     }
 
     double NonUniformBspline::getTimeSum() {
@@ -285,11 +285,11 @@ namespace fast_planner {
 
         Eigen::VectorXd times = jerk_traj.getKnot();
         Eigen::MatrixXd ctrl_pts = jerk_traj.getControlPoint();
-        int dimension = ctrl_pts.cols();
+        Eigen::Index dimension = ctrl_pts.cols();
 
         double jerk = 0.0;
-        for (size_t i = 0; i < ctrl_pts.rows(); ++i) {
-            for (size_t j = 0; j < dimension; ++j) {
+        for (Eigen::Index i = 0; i < ctrl_pts.rows(); ++i) {
+            for (Eigen::Index j = 0; j < dimension; ++j) {
                 jerk += (times(i + 1) - times(i)) * ctrl_pts(i, j) * ctrl_pts(i, j);
             }
         }
@@ -349,12 +349,12 @@ namespace fast_planner {
         bool fea = true;
 
         Eigen::MatrixXd P = control_points_;
-        int dimension = control_points_.cols();
+        Eigen::Index dimension = control_points_.cols();
 
         double max_vel, max_acc;
 
         /* check vel feasibility and insert points */
-        for (size_t i = 0; i < P.rows() - 1; ++i) {
+        for (Eigen::Index i = 0; i < P.rows() - 1; ++i) {
             Eigen::VectorXd vel = p_ * (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1));
 
             if (fabs(vel(0)) > limit_vel_ + 1e-4 || fabs(vel(1)) > limit_vel_ + 1e-4 ||
@@ -363,7 +363,7 @@ namespace fast_planner {
                 if (show) cout << "[Realloc]: Infeasible vel " << i << " :" << vel.transpose() << endl;
 
                 max_vel = -1.0;
-                for (size_t j = 0; j < dimension; ++j) {
+                for (Eigen::Index j = 0; j < dimension; ++j) {
                     max_vel = max(max_vel, fabs(vel(j)));
                 }
 
@@ -375,21 +375,21 @@ namespace fast_planner {
                 double delta_t = time_new - time_ori;
                 double t_inc = delta_t / double(p_);
 
-                for (int j = i + 2; j <= i + p_ + 1; ++j) {
+                for (Eigen::Index j = i + 2; j <= i + p_ + 1; ++j) {
                     u_(j) += double(j - i - 1) * t_inc;
                     if (j <= 5 && j >= 1) {
                         // cout << "vel j: " << j << endl;
                     }
                 }
 
-                for (int j = i + p_ + 2; j < u_.rows(); ++j) {
+                for (Eigen::Index j = i + p_ + 2; j < u_.rows(); ++j) {
                     u_(j) += delta_t;
                 }
             }
         }
 
         /* acc feasibility */
-        for (size_t i = 0; i < P.rows() - 2; ++i) {
+        for (Eigen::Index i = 0; i < P.rows() - 2; ++i) {
             Eigen::VectorXd acc = p_ * (p_ - 1) * ((P.row(i + 2) - P.row(i + 1)) / (u_(i + p_ + 2) - u_(i + 2)) -
                                                    (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1))) /
                                   (u_(i + p_ + 1) - u_(i + 2));
@@ -400,7 +400,7 @@ namespace fast_planner {
                 if (show) cout << "[Realloc]: Infeasible acc " << i << " :" << acc.transpose() << endl;
 
                 max_acc = -1.0;
-                for (size_t j = 0; j < dimension; ++j) {
+                for (Eigen::Index j = 0; j < dimension; ++j) {
                     max_acc = max(max_acc, fabs(acc(j)));
                 }
 
@@ -423,14 +423,14 @@ namespace fast_planner {
                         u_(j) += 4.0 * t_inc;
                     }
                 } else {
-                    for (int j = i + 3; j <= i + p_ + 1; ++j) {
+                    for (Eigen::Index j = i + 3; j <= i + p_ + 1; ++j) {
                         u_(j) += double(j - i - 2) * t_inc;
                         if (j <= 5 && j >= 1) {
                             // cout << "acc j: " << j << endl;
                         }
                     }
 
-                    for (int j = i + p_ + 2; j < u_.rows(); ++j) {
+                    for (Eigen::Index j = i + p_ + 2; j < u_.rows(); ++j) {
                         u_(j) += delta_t;
                     }
                 }
@@ -445,19 +445,20 @@ namespace fast_planner {
         // SETY << "[Bspline]: total points size: " << control_points_.rows() << endl;
 
         Eigen::MatrixXd P = control_points_;
-        int dimension = control_points_.cols();
+        Eigen::Index dimension = control_points_.cols();
 
         /* check vel feasibility and insert points */
         double max_vel = -1.0;
-        for (size_t i = 0; i < P.rows() - 1; ++i) {
+        for (Eigen::Index i = 0; i < P.rows() - 1; ++i) {
             Eigen::VectorXd vel = p_ * (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1));
 
-            if (fabs(vel(0)) > limit_vel_ + 1e-4 || fabs(vel(1)) > limit_vel_ + 1e-4 ||
+            if (fabs(vel(0)) > limit_vel_ + 1e-4 ||
+                fabs(vel(1)) > limit_vel_ + 1e-4 ||
                 fabs(vel(2)) > limit_vel_ + 1e-4) {
                 if (show) cout << "[Check]: Infeasible vel " << i << " :" << vel.transpose() << endl;
                 fea = false;
 
-                for (size_t j = 0; j < dimension; ++j) {
+                for (Eigen::Index j = 0; j < dimension; ++j) {
                     max_vel = max(max_vel, fabs(vel(j)));
                 }
             }
@@ -465,7 +466,7 @@ namespace fast_planner {
 
         /* acc feasibility */
         double max_acc = -1.0;
-        for (size_t i = 0; i < P.rows() - 2; ++i) {
+        for (Eigen::Index i = 0; i < P.rows() - 2; ++i) {
             Eigen::VectorXd acc = p_ * (p_ - 1) * ((P.row(i + 2) - P.row(i + 1)) / (u_(i + p_ + 2) - u_(i + 2)) -
                                                    (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1))) /
                                   (u_(i + p_ + 1) - u_(i + 2));
@@ -475,7 +476,7 @@ namespace fast_planner {
                 if (show) cout << "[Check]: Infeasible acc " << i << " :" << acc.transpose() << endl;
                 fea = false;
 
-                for (size_t j = 0; j < dimension; ++j) {
+                for (Eigen::Index j = 0; j < dimension; ++j) {
                     max_acc = max(max_acc, fabs(acc(j)));
                 }
             }

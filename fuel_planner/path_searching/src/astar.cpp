@@ -189,8 +189,8 @@ void Astar::init() {
   this->inv_resolution_ = 1.0 / resolution_;
   inv_time_resolution_ = 1.0 / time_resolution_;
   edt_environment_->sdf_map_->getRegion(origin_, map_size_3d_);
-  cout << "origin_: " << origin_.transpose() << endl;
-  cout << "map size: " << map_size_3d_.transpose() << endl;
+  cout << "astar origin_: " << origin_.transpose() << endl;
+  cout << "astar map size: " << map_size_3d_.transpose() << endl;
 
   path_node_pool_.resize(allocate_num_);
   for (size_t i = 0; i < allocate_num_; i++) {

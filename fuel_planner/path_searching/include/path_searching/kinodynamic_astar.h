@@ -40,6 +40,7 @@ namespace fast_planner {
         PathNode() {
             parent = nullptr;
             node_state = NOT_EXPAND;
+            input = Eigen::Vector3d::Zero();
         }
 
         ~PathNode() = default;

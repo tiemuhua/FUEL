@@ -143,10 +143,16 @@ namespace fast_planner {
         double ts = pp_.ctrl_pt_dist / pp_.max_vel_;
         vector<Eigen::Vector3d> point_set, start_end_derivatives;
         kino_path_finder_->getSamples(ts, point_set, start_end_derivatives);
+        cout << "point set sampled\n";
+        for (auto point:point_set) {
+            cout << point.transpose() <<endl;
+        }
         Eigen::MatrixXd ctrl_pts;
         NonUniformBspline::parameterizeToBspline(
                 ts, point_set, start_end_derivatives, pp_.bspline_degree_, ctrl_pts);
         NonUniformBspline init(ctrl_pts, pp_.bspline_degree_, ts);
+        cout << "control points\n";
+        cout << ctrl_pts <<endl;
 
         /*********************************
          * B-spline-based optimization   *

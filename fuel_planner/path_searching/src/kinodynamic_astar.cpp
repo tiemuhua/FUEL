@@ -115,6 +115,9 @@ namespace fast_planner {
                             abs(cur_node->index(2) - end_index(2)) <= tolerance;
             if (reach_horizon || near_end) {
                 path_nodes_ = move(retrievePath(cur_node));
+                for (auto node:path_nodes_) {
+                    cout << "path node input\t"<<node->input.transpose()<<endl;
+                }
                 if (near_end) {
                     // Check whether shot traj exist
                     estimateHeuristic(cur_node->state, end_state, time_to_goal);
@@ -171,7 +174,8 @@ namespace fast_planner {
             }
 
             // cout << "cur state:" << cur_state.head(3).transpose() << endl;
-            for (const Vector3d &input: inputs)
+            for (const Vector3d &input: inputs) {
+                cout << "input.transpose()\t" << input.transpose() << endl;
                 for (double tau: durations) {
                     stateTransit(cur_state, pro_state, input, tau);
                     pro_t = cur_node->time + tau;
@@ -299,6 +303,7 @@ namespace fast_planner {
                         cout << "error type in searching: " << pro_node->node_state << endl;
                     }
                 }
+            }
         }
 
         cout << "open set empty, no path!" << endl;
@@ -579,15 +584,22 @@ namespace fast_planner {
         if (path_nodes_.empty()) {
             // no searched traj, calculate by shot traj
             start_acc = 2 * coef_shot_.col(2);
+            cout << "path nodes empty\n";
         } else {
             // input of searched traj
             start_acc = path_nodes_.front()->input;
+            cout << "path nodes not empty\n";
         }
 
         start_end_derivatives.push_back(start_vel_);
         start_end_derivatives.push_back(end_vel);
         start_end_derivatives.push_back(start_acc);
         start_end_derivatives.push_back(end_acc);
+
+        cout << "get sample start end derivatives\n";
+        for (auto d:start_end_derivatives) {
+            cout << d.transpose()<<endl;
+        }
     }
 
     Eigen::Vector3i KinodynamicAstar::posToIndex(const Eigen::Vector3d &pt) {

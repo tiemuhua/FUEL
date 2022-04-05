@@ -28,22 +28,11 @@ namespace fast_planner {
         static const int GUIDE_PHASE;
         static const int NORMAL_PHASE;
 
-//        BsplineOptimizer() {
-//        }
-//
-//        ~BsplineOptimizer() {
-//        }
-
         /* main API */
-//        void setEnvironment(const shared_ptr<EDTEnvironment> &env);
-//
-//        void setParam(ros::NodeHandle &nh);
         BsplineOptimizer(ros::NodeHandle &nh, const EDTEnvironment::Ptr &env);
 
         void optimize(Eigen::MatrixXd &points, double &dt, const int &cost_function, const int &max_num_id,
                       const int &max_time_id);
-
-        /* helper function */
 
         // required inputs
         void setCostFunction(const int &cost_function);
@@ -57,15 +46,10 @@ namespace fast_planner {
 
         void setWaypoints(const vector<Eigen::Vector3d> &waypts,
                           const vector<int> &waypt_idx);  // N-2 constraints at most
-//        void setViewConstraint(const ViewConstraint &vc);
-//
-//        void enableDynamic(double time_start);
 
         void optimize();
 
         Eigen::MatrixXd getControlPoints();
-
-//        vector<Eigen::Vector3d> matrixToVectors(const Eigen::MatrixXd &ctrl_pts);
 
     private:
         // Wrapper of cost function
@@ -135,12 +119,12 @@ namespace fast_planner {
         vector<Eigen::Vector3d> g_q_, g_smoothness_, g_distance_, g_feasibility_, g_start_, g_end_, g_guide_,
                 g_waypoints_, g_view_, g_time_;
 
-        int variable_num_{};  // optimization variables
+        int variable_num_{};                    // optimization variables
         int point_num_{};
         bool optimize_time_{};
-        int iter_num_{};                       // iteration of the solver
-        std::vector<double> best_variable_;  //
-        double min_cost_{};                    //
+        int iter_num_{};                        // iteration of the solver
+        std::vector<double> best_variable_;
+        double min_cost_{};
         ViewConstraint view_cons_;
         double pt_dist_{};
 
