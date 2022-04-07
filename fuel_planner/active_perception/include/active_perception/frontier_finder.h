@@ -46,16 +46,16 @@ struct Frontier {
   // Bounding box of cluster, center & 1/2 side length
   Vector3d box_min_, box_max_;
   // Path and cost from this cluster to other clusters
-  list<vector<Vector3d>> paths_;
-  list<double> costs_;
+  vector<vector<Vector3d>> paths_;
+  vector<double> costs_;
 };
 
 class FrontierFinder {
 public:
   FrontierFinder(const shared_ptr<EDTEnvironment>& edt, ros::NodeHandle& nh);
   ~FrontierFinder();
-
-  void searchFrontiers();
+  void removeOutDatedFrontiers();
+  void searchAndAddFrontiers();
 
   void getFrontiers(vector<vector<Vector3d>>& clusters);
   void getDormantFrontiers(vector<vector<Vector3d>>& clusters);
@@ -68,11 +68,10 @@ public:
                          const double& max_decay, vector<vector<Vector3d>>& points,
                          vector<vector<double>>& yaws);
   void updateFrontierCostMatrix();
-  void getFullCostMatrix(const Vector3d& cur_pos, const Vector3d& cur_vel, const Vector3d cur_yaw,
+  void getFullCostMatrix(const Vector3d& cur_pos, const Vector3d& cur_vel, const Vector3d& cur_yaw,
                          Eigen::MatrixXd& mat);
   void getPathForTour(const Vector3d& pos, const vector<int>& frontier_ids, vector<Vector3d>& path);
 
-  void setNextFrontier(const int& id);
   bool isFrontierCovered();
   static void wrapYaw(double& yaw);
 
@@ -81,7 +80,6 @@ public:
 private:
   void splitLargeFrontiers(vector<Frontier>& frontiers);
   bool splitHorizontally(const Frontier& frontier, vector<Frontier>& splits);
-  void mergeFrontiers(Frontier& ftr1, const Frontier& ftr2);
   bool isFrontierChanged(const Frontier& ft);
   static bool haveOverlap(const Vector3d& min1, const Vector3d& max1, const Vector3d& min2,
                    const Vector3d& max2);
@@ -91,29 +89,21 @@ private:
 
   int countVisibleCells(const Vector3d& pos, const double& yaw, const vector<Vector3d>& cluster);
   bool isNearUnknown(const Vector3d& pos);
-  vector<Eigen::Vector3i> sixNeighbors(const Eigen::Vector3i& voxel);
-  vector<Eigen::Vector3i> tenNeighbors(const Eigen::Vector3i& voxel);
-  vector<Eigen::Vector3i> allNeighbors(const Eigen::Vector3i& voxel);
+  static vector<Eigen::Vector3i> sixNeighbors(const Eigen::Vector3i& voxel);
+  static vector<Eigen::Vector3i> allNeighbors(const Eigen::Vector3i& voxel);
   bool isNeighborUnknown(const Eigen::Vector3i& voxel);
     bool expandFrontier(const Eigen::Vector3i &first, Frontier &frontier);
 
   // Wrapper of sdf map
   int toadr(const Eigen::Vector3i& idx);
   bool knownfree(const Eigen::Vector3i& idx);
-  bool inmap(const Eigen::Vector3i& idx);
-
-  // Deprecated
-  Eigen::Vector3i searchClearVoxel(const Eigen::Vector3i& pt);
-  bool isInBoxes(const vector<pair<Vector3d, Vector3d>>& boxes, const Eigen::Vector3i& idx);
-  bool canBeMerged(const Frontier& ftr1, const Frontier& ftr2);
-  void findViewpoints(const Vector3d& sample, const Vector3d& ftr_avg, vector<Viewpoint>& vps);
 
   // Data
   vector<char> frontier_flag_;
-  list<Frontier> frontiers_, dormant_frontiers_;
+//  list<Frontier> frontiers_, dormant_frontiers_;
+    vector<Frontier> frontiers_, dormant_frontiers_;
   vector<int> removed_ids_;
-  list<Frontier>::iterator first_new_ftr_;
-  Frontier next_frontier_;
+    size_t origin_frontiers_num;
 
   // Params
   int cluster_min_;

@@ -274,7 +274,7 @@ namespace fast_planner {
         if (state_ == WAIT_TRIGGER || state_ == FINISH) {
             auto ft = expl_manager_->frontier_finder_;
             auto ed = expl_manager_->ed_;
-            ft->searchFrontiers();
+            ft->searchAndAddFrontiers();
             // ft->computeFrontiersToVisit();
             ft->updateFrontierCostMatrix();
 

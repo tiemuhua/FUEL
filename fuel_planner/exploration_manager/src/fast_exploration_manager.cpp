@@ -83,12 +83,11 @@ namespace fast_planner {
 
         // Search frontiers and group them into clusters
         ros::Time t1 = ros::Time::now(), t2 = ros::Time::now();
-        frontier_finder_->searchFrontiers();
+        frontier_finder_->searchAndAddFrontiers();
         double frontier_time = (ros::Time::now() - t1).toSec();
 
         // Find viewpoints (x,y,z,yaw) for all frontier clusters and get visible ones' info
         t1 = ros::Time::now();
-//        frontier_finder_->computeFrontiersToVisit();
         frontier_finder_->getFrontiers(ed_->frontiers_);
         frontier_finder_->getFrontierBoxes(ed_->frontier_boxes_);
         frontier_finder_->getDormantFrontiers(ed_->dead_frontiers_);

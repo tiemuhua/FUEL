@@ -105,7 +105,8 @@ namespace fast_planner {
 
     void FastPlannerManager::searchFrontier(const Eigen::Vector3d &p) {
         // show frontier for reference
-        frontier_finder_->searchFrontiers();
+        frontier_finder_->removeOutDatedFrontiers();
+        frontier_finder_->searchAndAddFrontiers();
     }
 
     void FastPlannerManager::test() {
