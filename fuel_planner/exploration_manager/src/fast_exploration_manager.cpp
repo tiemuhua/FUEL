@@ -88,7 +88,7 @@ namespace fast_planner {
 
         // Find viewpoints (x,y,z,yaw) for all frontier clusters and get visible ones' info
         t1 = ros::Time::now();
-        frontier_finder_->computeFrontiersToVisit();
+//        frontier_finder_->computeFrontiersToVisit();
         frontier_finder_->getFrontiers(ed_->frontiers_);
         frontier_finder_->getFrontierBoxes(ed_->frontier_boxes_);
         frontier_finder_->getDormantFrontiers(ed_->dead_frontiers_);

@@ -569,11 +569,6 @@ namespace fast_planner {
         start_end_derivatives.push_back(end_vel);
         start_end_derivatives.push_back(start_acc);
         start_end_derivatives.push_back(end_acc);
-
-        cout << "get sample start end derivatives\n";
-        for (auto d: start_end_derivatives) {
-            cout << d.transpose() << endl;
-        }
     }
 
     Eigen::Vector3i KinodynamicAstar::posToIndex(const Eigen::Vector3d &pt) {

@@ -275,7 +275,7 @@ namespace fast_planner {
             auto ft = expl_manager_->frontier_finder_;
             auto ed = expl_manager_->ed_;
             ft->searchFrontiers();
-            ft->computeFrontiersToVisit();
+            // ft->computeFrontiersToVisit();
             ft->updateFrontierCostMatrix();
 
             ft->getFrontiers(ed->frontiers_);

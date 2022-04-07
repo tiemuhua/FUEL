@@ -56,7 +56,6 @@ public:
   ~FrontierFinder();
 
   void searchFrontiers();
-  void computeFrontiersToVisit();
 
   void getFrontiers(vector<vector<Vector3d>>& clusters);
   void getDormantFrontiers(vector<vector<Vector3d>>& clusters);
@@ -80,8 +79,8 @@ public:
   shared_ptr<PerceptionUtils> percep_utils_;
 
 private:
-  void splitLargeFrontiers(list<Frontier>& frontiers);
-  bool splitHorizontally(const Frontier& frontier, list<Frontier>& splits);
+  void splitLargeFrontiers(vector<Frontier>& frontiers);
+  bool splitHorizontally(const Frontier& frontier, vector<Frontier>& splits);
   void mergeFrontiers(Frontier& ftr1, const Frontier& ftr2);
   bool isFrontierChanged(const Frontier& ft);
   static bool haveOverlap(const Vector3d& min1, const Vector3d& max1, const Vector3d& min2,
@@ -96,7 +95,7 @@ private:
   vector<Eigen::Vector3i> tenNeighbors(const Eigen::Vector3i& voxel);
   vector<Eigen::Vector3i> allNeighbors(const Eigen::Vector3i& voxel);
   bool isNeighborUnknown(const Eigen::Vector3i& voxel);
-  void expandFrontier(const Eigen::Vector3i& first /* , const int& depth, const int& parent_id */);
+    bool expandFrontier(const Eigen::Vector3i &first, Frontier &frontier);
 
   // Wrapper of sdf map
   int toadr(const Eigen::Vector3i& idx);
@@ -111,7 +110,7 @@ private:
 
   // Data
   vector<char> frontier_flag_;
-  list<Frontier> frontiers_, dormant_frontiers_, tmp_frontiers_;
+  list<Frontier> frontiers_, dormant_frontiers_;
   vector<int> removed_ids_;
   list<Frontier>::iterator first_new_ftr_;
   Frontier next_frontier_;
@@ -119,8 +118,7 @@ private:
   // Params
   int cluster_min_;
   double cluster_size_xy_, cluster_size_z_;
-  double candidate_rmax_, candidate_rmin_, candidate_dphi_, min_candidate_dist_,
-      min_candidate_clearance_;
+  double candidate_rmax_, candidate_rmin_, candidate_dphi_, min_candidate_dist_, min_candidate_clearance_;
   int down_sample_;
   double min_view_finish_fraction_, resolution_;
   int min_visib_num_, candidate_rnum_;

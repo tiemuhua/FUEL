@@ -53,7 +53,6 @@ namespace fast_planner {
 
     void FrontierFinder::searchFrontiers() {
         ros::Time t1 = ros::Time::now();
-        tmp_frontiers_.clear();
 
         // Bounding box of updated region
         Vector3d update_min, update_max;
@@ -105,6 +104,7 @@ namespace fast_planner {
         edt_env_->sdf_map_->posToIndex(search_min, min_id);
         edt_env_->sdf_map_->posToIndex(search_max, max_id);
 
+        vector<Frontier> tmp_frontiers;
         for (int x = min_id(0); x <= max_id(0); ++x)
             for (int y = min_id(1); y <= max_id(1); ++y)
                 for (int z = min_id(2); z <= max_id(2); ++z) {
@@ -112,15 +112,49 @@ namespace fast_planner {
                     Eigen::Vector3i cur(x, y, z);
                     if (frontier_flag_[toadr(cur)] == 0 && knownfree(cur) && isNeighborUnknown(cur)) {
                         // Expand from the seed cell to find a complete frontier cluster
-                        expandFrontier(cur);
+                        Frontier frontier;
+                        if (expandFrontier(cur, frontier)) {
+                            tmp_frontiers.push_back(move(frontier));
+                        }
                     }
                 }
-        splitLargeFrontiers(tmp_frontiers_);
+        splitLargeFrontiers(tmp_frontiers);
 
         ROS_WARN_THROTTLE(5.0, "Frontier t: %lf", (ros::Time::now() - t1).toSec());
+
+        first_new_ftr_ = frontiers_.end();
+        int new_num = 0;
+        int new_dormant_num = 0;
+        // Try find viewpoints for each cluster and categorize them according to viewpoint number
+        for (auto &tmp_ftr: tmp_frontiers) {
+            // Search viewpoints around frontier
+            sampleViewpoints(tmp_ftr);
+            if (!tmp_ftr.viewpoints_.empty()) {
+                ++new_num;
+                list<Frontier>::iterator inserted = frontiers_.insert(frontiers_.end(), tmp_ftr);
+                // Sort the viewpoints by coverage fraction, best view in front
+                sort(inserted->viewpoints_.begin(), inserted->viewpoints_.end(),
+                     [](const Viewpoint &v1, const Viewpoint &v2) { return v1.visib_num_ > v2.visib_num_; });
+                if (first_new_ftr_ == frontiers_.end()) first_new_ftr_ = inserted;
+            } else {
+                // Find no viewpoint, move cluster to dormant list
+                dormant_frontiers_.push_back(tmp_ftr);
+                ++new_dormant_num;
+            }
+        }
+        // Reset indices of frontiers
+        int idx = 0;
+        for (auto &ft: frontiers_) {
+            ft.id_ = idx++;
+            std::cout << ft.id_ << ", ";
+        }
+        std::cout << "\nnew num: " << new_num << ", new dormant: " << new_dormant_num << std::endl;
+        std::cout << "to visit: " << frontiers_.size() << ", dormant: " << dormant_frontiers_.size()
+                  << std::endl;
+
     }
 
-    void FrontierFinder::expandFrontier(const Eigen::Vector3i &first) {
+    bool FrontierFinder::expandFrontier(const Eigen::Vector3i &first, Frontier &frontier) {
         // std::cout << "depth: " << depth << std::endl;
         auto t1 = ros::Time::now();
 
@@ -155,15 +189,15 @@ namespace fast_planner {
         }
         if (expanded.size() > cluster_min_) {
             // Compute detailed info
-            Frontier frontier;
             frontier.cells_ = expanded;
             computeFrontierInfo(frontier);
-            tmp_frontiers_.push_back(frontier);
+            return true;
         }
+        return false;
     }
 
-    void FrontierFinder::splitLargeFrontiers(list<Frontier> &frontiers) {
-        list<Frontier> splits, tmps;
+    void FrontierFinder::splitLargeFrontiers(vector<Frontier> &frontiers) {
+        vector<Frontier> splits, tmps;
         for (auto &frontier: frontiers) {
             // Check if each frontier needs to be split horizontally
             if (splitHorizontally(frontier, splits)) {
@@ -175,7 +209,7 @@ namespace fast_planner {
         frontiers = tmps;
     }
 
-    bool FrontierFinder::splitHorizontally(const Frontier &frontier, list<Frontier> &splits) {
+    bool FrontierFinder::splitHorizontally(const Frontier &frontier, vector<Frontier> &splits) {
         // Split a frontier into small piece if it is too large
         auto mean = frontier.average_.head<2>();
         bool need_split = false;
@@ -225,13 +259,13 @@ namespace fast_planner {
         computeFrontierInfo(ftr2);
 
         // Recursive call to split frontier that is still too large
-        list<Frontier> splits2;
-        if (splitHorizontally(ftr1, splits2)) {
-            splits.insert(splits.end(), splits2.begin(), splits2.end());
-            splits2.clear();
+        vector<Frontier> splits1;
+        if (splitHorizontally(ftr1, splits1)) {
+            splits.insert(splits.end(), splits1.begin(), splits1.end());
         } else
             splits.push_back(ftr1);
 
+        vector<Frontier> splits2;
         if (splitHorizontally(ftr2, splits2))
             splits.insert(splits.end(), splits2.begin(), splits2.end());
         else
@@ -353,7 +387,7 @@ namespace fast_planner {
             const Vector3d &min1, const Vector3d &max1, const Vector3d &min2, const Vector3d &max2) {
         // Check if two box have overlap part
         Vector3d bmin, bmax;
-        for (size_t i = 0; i < 3; ++i) {
+        for (Eigen::Index i = 0; i < 3; ++i) {
             bmin[i] = max(min1[i], min2[i]);
             bmax[i] = min(max1[i], max2[i]);
             if (bmin[i] > bmax[i] + 1e-3) return false;
@@ -386,38 +420,6 @@ namespace fast_planner {
 
         // Compute downsampled cluster
         downsample(ftr.cells_, ftr.filtered_cells_);
-    }
-
-    void FrontierFinder::computeFrontiersToVisit() {
-        first_new_ftr_ = frontiers_.end();
-        int new_num = 0;
-        int new_dormant_num = 0;
-        // Try find viewpoints for each cluster and categorize them according to viewpoint number
-        for (auto &tmp_ftr: tmp_frontiers_) {
-            // Search viewpoints around frontier
-            sampleViewpoints(tmp_ftr);
-            if (!tmp_ftr.viewpoints_.empty()) {
-                ++new_num;
-                list<Frontier>::iterator inserted = frontiers_.insert(frontiers_.end(), tmp_ftr);
-                // Sort the viewpoints by coverage fraction, best view in front
-                sort(inserted->viewpoints_.begin(), inserted->viewpoints_.end(),
-                     [](const Viewpoint &v1, const Viewpoint &v2) { return v1.visib_num_ > v2.visib_num_; });
-                if (first_new_ftr_ == frontiers_.end()) first_new_ftr_ = inserted;
-            } else {
-                // Find no viewpoint, move cluster to dormant list
-                dormant_frontiers_.push_back(tmp_ftr);
-                ++new_dormant_num;
-            }
-        }
-        // Reset indices of frontiers
-        int idx = 0;
-        for (auto &ft: frontiers_) {
-            ft.id_ = idx++;
-            std::cout << ft.id_ << ", ";
-        }
-        std::cout << "\nnew num: " << new_num << ", new dormant: " << new_dormant_num << std::endl;
-        std::cout << "to visit: " << frontiers_.size() << ", dormant: " << dormant_frontiers_.size()
-                  << std::endl;
     }
 
     void FrontierFinder::getTopViewpointsInfo(
