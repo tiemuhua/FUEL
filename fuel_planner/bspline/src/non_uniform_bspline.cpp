@@ -241,10 +241,6 @@ namespace fast_planner {
             A.block<1, 5>(K + 3, K - 1) = pt_to_acc.transpose();
         }
 
-        cout << fixed << setprecision(3) << endl;
-        std::cout << "A:" << std::endl;
-        std::cout << A << std::endl;
-
         // K Waypoints and 4 boundary derivative
         for (Eigen::Index i = 0; i < K; ++i) {
             bx(i) = point_set[i][0];

@@ -285,8 +285,6 @@ namespace fast_planner {
         auto time_now = ros::Time::now();
         global_data_.setGlobalTraj(gl_traj, time_now);
 
-        // truncate a local trajectory
-
         double dt, duration;
         Eigen::MatrixXd ctrl_pts = paramLocalTraj(0.0, dt, duration);
         NonUniformBspline bspline(ctrl_pts, pp_.bspline_degree_, dt);
@@ -324,8 +322,6 @@ namespace fast_planner {
             local_data_.position_traj_ = init_traj;
             global_data_.setLocalTraj(
                     local_data_.position_traj_, t_now, local_traj_duration + time_change + t_now, time_change);
-            // local_data_.position_traj_ = init_traj;
-            // global_data_.setLocalTraj(init_traj, t_now, local_traj_duration + t_now, 0.0);
         } else {
             // Find topologically distinctive path and guide optimization in parallel
             plan_data_.initial_local_segment_ = init_traj;

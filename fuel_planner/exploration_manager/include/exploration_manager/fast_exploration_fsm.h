@@ -58,7 +58,7 @@ namespace fast_planner {
         /* helper functions */
         int callExplorationPlanner();
 
-        void transitState(EXPL_STATE new_state, string pos_call);
+        void transitState(EXPL_STATE new_state, const string& pos_call);
 
         /* ROS functions */
         void FSMCallback(const ros::TimerEvent &e);

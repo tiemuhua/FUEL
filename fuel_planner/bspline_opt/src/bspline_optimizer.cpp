@@ -207,12 +207,9 @@ namespace fast_planner {
         } catch (std::exception &e) {
             cout << "std exception\t" << e.what() << endl;
         }
-        cout << "????????????????????????\n";
 
         for (Eigen::Index i = 0; i < point_num_; ++i)
             for (Eigen::Index j = 0; j < dim_; ++j) {
-                cout << "i\t" << i << "\tj\t" << j << endl;
-                printf("optimize best variable address\t%p\n", &(best_variable_));
                 control_points_(i, j) = best_variable_[dim_ * i + j];
             }
         if (optimize_time_) knot_span_ = best_variable_[variable_num_ - 1];
@@ -331,15 +328,11 @@ namespace fast_planner {
         q1 = q[0];
         q2 = q[1];
         q3 = q[2];
-        cout << "q1 q2 q3 start_state_\n";
-        cout << q1.transpose() << endl << q2.transpose() << endl << q3.transpose() << endl<< start_state_[0].transpose()<<endl;
 
         // Start position
         static const double w_pos = 10.0;
         dq = 1 / 6.0 * (q1 + 4 * q2 + q3) - start_state_[0];
-        cout << "dq\t" << dq.transpose() << endl;
         cost += w_pos * dq.squaredNorm();
-        cout << "calcStartCost1\t" << cost << endl;
         gradient_q[0] += w_pos * 2 * dq * (1 / 6.0);
         gradient_q[1] += w_pos * 2 * dq * (4 / 6.0);
         gradient_q[2] += w_pos * 2 * dq * (1 / 6.0);
@@ -347,7 +340,6 @@ namespace fast_planner {
         // Start velocity
         dq = 1 / (2 * dt) * (q3 - q1) - start_state_[1];
         cost += dq.squaredNorm();
-        cout << "calcStartCost2\t" << cost << endl;
         gradient_q[0] += 2 * dq * (-1.0) / (2 * dt);
         gradient_q[2] += 2 * dq * 1.0 / (2 * dt);
         if (optimize_time_) gt += dq.dot(q3 - q1) / (-dt * dt);
@@ -355,7 +347,6 @@ namespace fast_planner {
         // Start acceleration
         dq = 1 / (dt * dt) * (q1 - 2 * q2 + q3) - start_state_[2];
         cost += dq.squaredNorm();
-        cout << "calcStartCost3\t" << cost << endl;
         gradient_q[0] += 2 * dq * 1.0 / (dt * dt);
         gradient_q[1] += 2 * dq * (-2.0) / (dt * dt);
         gradient_q[2] += 2 * dq * 1.0 / (dt * dt);
@@ -491,7 +482,6 @@ namespace fast_planner {
                                        double &f_combine) {
         ros::Time t1 = ros::Time::now();
 
-        cout << "combine const x size\t" << x.size() << "\tpoint_num_\t" << point_num_ << "\tdim_\t" << dim_ << endl;
         for (size_t i = 0; i < point_num_; ++i) {
             for (Eigen::Index j = 0; j < dim_; ++j)
                 g_q_[i][j] = x[dim_ * i + j];
@@ -513,7 +503,6 @@ namespace fast_planner {
                     grad[dim_ * i + j] += ld_smooth_ * g_smoothness_[i](j);
             if (optimize_time_) grad[variable_num_ - 1] += ld_smooth_ * gt_smoothness;
         }
-        cout << "SMOOTHNESS" << f_combine << endl;
 
         if (cost_function_ & DISTANCE) {
             double f_distance = 0.0;
@@ -523,19 +512,16 @@ namespace fast_planner {
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_dist_ * g_distance_[i](j);
         }
-        cout << "DISTANCE" << f_combine << endl;
 
         if (cost_function_ & FEASIBILITY) {
             double f_feasibility = 0.0, gt_feasibility = 0.0;
             calcFeasibilityCost(g_q_, dt, f_feasibility, g_feasibility_, gt_feasibility);
-//            cout << "calcFeasibilityCost end\t" << f_feasibility << "\tld_feasi_\t" << ld_feasi_ << endl;
             f_combine += ld_feasi_ * f_feasibility;
             for (size_t i = 0; i < point_num_; i++)
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_feasi_ * g_feasibility_[i](j);
             if (optimize_time_) grad[variable_num_ - 1] += ld_feasi_ * gt_feasibility;
         }
-        cout << "FEASIBILITY" << f_combine << endl;
 
         if (cost_function_ & START) {
             double f_start = 0.0, gt_start = 0.0;
@@ -546,7 +532,6 @@ namespace fast_planner {
                     grad[dim_ * i + j] += ld_start_ * g_start_[i](j);
             if (optimize_time_) grad[variable_num_ - 1] += ld_start_ * gt_start;
         }
-        cout << "START" << f_combine << endl;
 
         if (cost_function_ & END) {
             double f_end = 0.0, gt_end = 0.0;
@@ -557,7 +542,6 @@ namespace fast_planner {
                     grad[dim_ * i + j] += ld_end_ * g_end_[i](j);
             if (optimize_time_) grad[variable_num_ - 1] += ld_end_ * gt_end;
         }
-        cout << "END" << f_combine << endl;
 
         if (cost_function_ & GUIDE) {
             double f_guide = 0.0;
@@ -567,7 +551,6 @@ namespace fast_planner {
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_guide_ * g_guide_[i](j);
         }
-        cout << "GUIDE" << f_combine << endl;
 
         if (cost_function_ & WAYPOINTS) {
             double f_waypoints = 0.0;
@@ -577,7 +560,6 @@ namespace fast_planner {
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_waypt_ * g_waypoints_[i](j);
         }
-        cout << "WAYPOINTS" << f_combine << endl;
 
         if (cost_function_ & VIEWCONS) {
             double f_view = 0.0;
@@ -587,7 +569,6 @@ namespace fast_planner {
                 for (Eigen::Index j = 0; j < dim_; j++)
                     grad[dim_ * i + j] += ld_view_ * g_view_[i](j);
         }
-        cout << "VIEWCONS" << f_combine << endl;
 
         if (cost_function_ & MINTIME) {
             double f_time = 0.0, gt_time = 0.0;
@@ -595,7 +576,6 @@ namespace fast_planner {
             f_combine += ld_time_ * f_time;
             grad[variable_num_ - 1] += ld_time_ * gt_time;
         }
-        cout << "MINTIME" << f_combine << endl;
 
         comb_time += (ros::Time::now() - t1).toSec();
     }
@@ -606,18 +586,13 @@ namespace fast_planner {
         double cost;
         opt->combineCost(x, grad, cost);
         opt->iter_num_++;
-        cout << "cost function\n";
-        cout << "cost\t" << cost << endl;
 
         /* save the min cost result */
         if (cost < opt->min_cost_) {
-            cout << "cost < opt->min_cost_\n";
             opt->min_cost_ = cost;
             opt->best_variable_ = x;
             std::cout << cost << ", ";
         }
-        cout << "best variable size\t" << opt->best_variable_.size() << endl;
-        printf("best variable address\t%p\n", &(opt->best_variable_));
         return cost;
     }
 
