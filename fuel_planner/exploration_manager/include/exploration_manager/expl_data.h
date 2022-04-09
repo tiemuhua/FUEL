@@ -56,6 +56,7 @@ namespace fast_planner {
         vector<Vector3d> views_vis1_, views_vis2_;
         vector<Vector3d> centers_, scales_;
     };
+    typedef shared_ptr<ExplorationData> ExplorationDataPtr;
 
     struct ExplorationParam {
         // params

@@ -14,7 +14,7 @@ namespace fast_planner {
     FrontierFinder::FrontierFinder(const EDTEnvironment::Ptr &edt, ros::NodeHandle &nh) {
         this->edt_env_ = edt;
         int voxel_num = edt->sdf_map_->getVoxelNum();
-        frontier_flag_ = vector<bool>(voxel_num, false);
+        is_in_frontier_ = vector<bool>(voxel_num, false);
 
         nh.param("frontier/cluster_min", cluster_min_, -1);
         nh.param("frontier/cluster_size_xy", cluster_size_xy_, -1.0);
@@ -29,13 +29,13 @@ namespace fast_planner {
         nh.param("frontier/min_visib_num", min_visible_num_, -1);
         nh.param("frontier/min_view_finish_fraction", min_view_finish_fraction_, -1.0);
 
-        raycaster_ = std::make_unique<RayCaster>();
+        ray_caster_ = std::make_unique<RayCaster>();
         resolution_ = edt_env_->sdf_map_->getResolution();
         Eigen::Vector3d origin, size;
         edt_env_->sdf_map_->getRegion(origin, size);
-        raycaster_->setParams(resolution_, origin);
+        ray_caster_->setParams(resolution_, origin);
 
-        percep_utils_.reset(new PerceptionUtils(nh));
+        perception_utils_.reset(new PerceptionUtils(nh));
     }
 
     FrontierFinder::~FrontierFinder() = default;
@@ -56,21 +56,21 @@ namespace fast_planner {
                 is_frontier_changed.push_back(false);
             }
         }
-        cout << "origin frontiers size\t"<<frontiers_.size() << endl;
+        cout << "origin frontiers size\t" << frontiers_.size() << endl;
         vector<Frontier> not_changed_frontiers;
         for (int i = 0; i < frontiers_.size(); ++i) {
             if (is_frontier_changed[i]) {
                 Vector3i idx;
-                for (const Vector3d &cell:frontiers_[i].cells_) {
-                    edt_env_->sdf_map_->posToIndex(cell,idx);
+                for (const Vector3d &cell: frontiers_[i].cells_) {
+                    edt_env_->sdf_map_->posToIndex(cell, idx);
                 }
-                frontier_flag_[toadr(idx)]= false;
+                is_in_frontier_[toAddress(idx)] = false;
             } else {
                 not_changed_frontiers.emplace_back(move(frontiers_[i]));
             }
         }
         frontiers_ = move(not_changed_frontiers);
-        cout << "removed frontiers size\t"<<frontiers_.size()<<endl;
+        cout << "removed frontiers size\t" << frontiers_.size() << endl;
 
         /********************************************
          * remove changed frontiers costs and paths *
@@ -104,10 +104,10 @@ namespace fast_planner {
         for (int i = 0; i < dormant_frontiers_.size(); ++i) {
             if (is_frontier_changed[i]) {
                 Vector3i idx;
-                for (const Vector3d &cell:dormant_frontiers_[i].cells_) {
-                    edt_env_->sdf_map_->posToIndex(cell,idx);
+                for (const Vector3d &cell: dormant_frontiers_[i].cells_) {
+                    edt_env_->sdf_map_->posToIndex(cell, idx);
                 }
-                frontier_flag_[toadr(idx)]= false;
+                is_in_frontier_[toAddress(idx)] = false;
             } else {
                 not_changed_dormant_frontiers.emplace_back(move(dormant_frontiers_[i]));
             }
@@ -136,12 +136,14 @@ namespace fast_planner {
         edt_env_->sdf_map_->posToIndex(search_max, max_id);
 
         vector<Frontier> tmp_frontiers;
+        cout << "min\t" << min_id.transpose() << endl;
+        cout << "max\t" << max_id.transpose() << endl;
         for (int x = min_id(0); x <= max_id(0); ++x)
             for (int y = min_id(1); y <= max_id(1); ++y)
                 for (int z = min_id(2); z <= max_id(2); ++z) {
                     // Scanning the updated region to find seeds of frontiers
                     Eigen::Vector3i cur(x, y, z);
-                    if (!frontier_flag_[toadr(cur)] && knownfree(cur) && isNeighborUnknown(cur)) {
+                    if (!is_in_frontier_[toAddress(cur)] && knownFree(cur) && isNeighborUnknown(cur)) {
                         // Expand from the seed cell to find a complete frontier cluster
                         Frontier frontier;
                         if (expandFrontier(cur, frontier)) {
@@ -163,7 +165,9 @@ namespace fast_planner {
             if (!tmp_ftr.viewpoints_.empty()) {
                 ++new_num;
                 sort(tmp_ftr.viewpoints_.begin(), tmp_ftr.viewpoints_.end(),
-                     [](const Viewpoint &v1, const Viewpoint &v2) { return v1.visible_num_ > v2.visible_num_; });
+                     [](const Viewpoint &v1, const Viewpoint &v2) -> bool {
+                         return v1.visible_num_ > v2.visible_num_;
+                     });
                 frontiers_.insert(frontiers_.end(), tmp_ftr);
             } else {
                 // Find no viewpoint, move cluster to dormant list
@@ -175,7 +179,6 @@ namespace fast_planner {
         int idx = 0;
         for (Frontier &ft: frontiers_) {
             ft.id_ = idx++;
-            std::cout << ft.id_ << ", ";
         }
         std::cout << "\nnew num: " << new_num << ", new dormant: " << new_dormant_num << std::endl;
         std::cout << "to visit: " << frontiers_.size() << ", dormant: " << dormant_frontiers_.size()
@@ -184,8 +187,6 @@ namespace fast_planner {
     }
 
     bool FrontierFinder::expandFrontier(const Eigen::Vector3i &first, Frontier &frontier) {
-        ros::Time t1 = ros::Time::now();
-
         // Data for clustering
         queue<Eigen::Vector3i> cell_queue;
         vector<Eigen::Vector3d> expanded;
@@ -194,25 +195,25 @@ namespace fast_planner {
         edt_env_->sdf_map_->indexToPos(first, pos);
         expanded.push_back(pos);
         cell_queue.push(first);
-        frontier_flag_[toadr(first)] = true;
+        is_in_frontier_[toAddress(first)] = true;
 
         // Search frontier cluster based on region growing (distance clustering)
         while (!cell_queue.empty()) {
-            Vector3i cur = cell_queue.front();
+            Vector3i cur_cell = cell_queue.front();
             cell_queue.pop();
-            vector<Vector3i> nbrs = allNeighbors(cur);
-            for (const Vector3i &nbr: nbrs) {
+            vector<Vector3i> neighbors = allNeighbors(cur_cell);
+            for (const Vector3i &next_cell: neighbors) {
                 // Qualified cell should be inside bounding box and frontier cell not clustered
-                int adr = toadr(nbr);
-                if (frontier_flag_[adr] || !edt_env_->sdf_map_->isInBox(nbr) ||
-                    !(knownfree(nbr) && isNeighborUnknown(nbr)))
+                int next_cell_adr = toAddress(next_cell);
+                if (is_in_frontier_[next_cell_adr] || !edt_env_->sdf_map_->isInBox(next_cell) ||
+                    !(knownFree(next_cell) && isNeighborUnknown(next_cell)))
                     continue;
 
-                edt_env_->sdf_map_->indexToPos(nbr, pos);
+                edt_env_->sdf_map_->indexToPos(next_cell, pos);
                 if (pos[2] < 0.4) continue;  // Remove noise close to ground
                 expanded.push_back(pos);
-                cell_queue.push(nbr);
-                frontier_flag_[adr] = true;
+                cell_queue.push(next_cell);
+                is_in_frontier_[next_cell_adr] = true;
             }
         }
         if (expanded.size() > cluster_min_) {
@@ -224,16 +225,15 @@ namespace fast_planner {
     }
 
     void FrontierFinder::splitLargeFrontiers(vector<Frontier> &frontiers) {
-        vector<Frontier> splits, tmps;
+        vector<Frontier> split_frontiers;
         for (Frontier &frontier: frontiers) {
-            // Check if each frontier needs to be split horizontally
+            vector<Frontier> splits;
             if (splitHorizontally(frontier, splits)) {
-                tmps.insert(tmps.end(), splits.begin(), splits.end());
-                splits.clear();
+                split_frontiers.insert(split_frontiers.end(), splits.begin(), splits.end());
             } else
-                tmps.push_back(frontier);
+                split_frontiers.emplace_back(move(frontier));
         }
-        frontiers = tmps;
+        frontiers = move(split_frontiers);
     }
 
     bool FrontierFinder::splitHorizontally(const Frontier &frontier, vector<Frontier> &splits) {
@@ -248,8 +248,7 @@ namespace fast_planner {
         }
         if (!need_split) return false;
 
-        // Compute principal component
-        // Covariance matrix of cells
+        // Compute principal component of Covariance matrix of cells
         Eigen::Matrix2d cov;
         cov.setZero();
         for (Vector3d cell: frontier.filtered_cells_) {
@@ -270,14 +269,11 @@ namespace fast_planner {
                 max_eigenvalue = values[i];
             }
         }
-        Eigen::Vector2d first_pc = vectors.col(max_idx);
-        std::cout << "max idx: " << max_idx << std::endl;
-        std::cout << "mean: " << mean.transpose() << ", first pc: " << first_pc.transpose() << std::endl;
+        Eigen::Vector2d dominate_eigen_vector = vectors.col(max_idx);
 
-        // Split the frontier into two groups along the first PC
         Frontier ftr1, ftr2;
         for (Vector3d cell: frontier.cells_) {
-            if ((cell.head<2>() - mean).dot(first_pc) >= 0)
+            if ((cell.head<2>() - mean).dot(dominate_eigen_vector) >= 0)
                 ftr1.cells_.push_back(cell);
             else
                 ftr2.cells_.push_back(cell);
@@ -303,7 +299,6 @@ namespace fast_planner {
 
     void FrontierFinder::updateFrontierCostMatrix() {
         auto updateCost = [](Frontier &it1, Frontier &it2) -> void {
-            std::cout << "(" << it1.id_ << "," << it2.id_ << "), ";
             // Search path from old cluster's top viewpoint to new cluster'
             Viewpoint &vui = it1.viewpoints_.front();
             Viewpoint &vuj = it2.viewpoints_.front();
@@ -318,7 +313,6 @@ namespace fast_planner {
             it2.paths_.push_back(path_ij);
         };
 
-        std::cout << "cost mat add: " << std::endl;
         // Compute path and cost between old and new clusters
         for (size_t i = 0; i < origin_frontiers_num_; ++i) {
             for (size_t j = origin_frontiers_num_; j < frontiers_.size(); ++j) {
@@ -332,22 +326,16 @@ namespace fast_planner {
                 updateCost(frontiers_[i], frontiers_[j]);
             }
         }
-
-        // Compute path and cost between new clusters
-        std::cout << "" << std::endl;
-        std::cout << "cost mat size final: " << std::endl;
-        for (const Frontier &ftr: frontiers_)
-            std::cout << "(" << ftr.costs_.size() << "," << ftr.paths_.size() << "), ";
-        std::cout << "" << std::endl;
     }
 
-    bool FrontierFinder::haveOverlap(const Vector3d &min1, const Vector3d &max1, const Vector3d &min2, const Vector3d &max2) {
+    bool FrontierFinder::haveOverlap(const Vector3d &min1, const Vector3d &max1, const Vector3d &min2,
+                                     const Vector3d &max2) {
         // Check if two box have overlap part
-        Vector3d bmin, bmax;
+        Vector3d box_min, box_max;
         for (Eigen::Index i = 0; i < 3; ++i) {
-            bmin[i] = max(min1[i], min2[i]);
-            bmax[i] = min(max1[i], max2[i]);
-            if (bmin[i] > bmax[i] + 1e-3) return false;
+            box_min[i] = max(min1[i], min2[i]);
+            box_max[i] = min(max1[i], max2[i]);
+            if (box_min[i] > box_max[i] + 1e-3) return false;
         }
         return true;
     }
@@ -356,7 +344,7 @@ namespace fast_planner {
         for (const Vector3d &cell: ft.cells_) {
             Eigen::Vector3i idx;
             edt_env_->sdf_map_->posToIndex(cell, idx);
-            if (!(knownfree(idx) && isNeighborUnknown(idx))) return true;
+            if (!(knownFree(idx) && isNeighborUnknown(idx))) return true;
         }
         return false;
     }
@@ -375,8 +363,8 @@ namespace fast_planner {
         }
         ftr.average_ /= double(ftr.cells_.size());
 
-        // Compute downsampled cluster
-        downsample(ftr.cells_, ftr.filtered_cells_);
+        // Compute down-sampled cluster
+        downSample(ftr.cells_, ftr.filtered_cells_);
     }
 
     void FrontierFinder::getTopViewpointsInfo(const Vector3d &cur_pos, vector<Eigen::Vector3d> &points,
@@ -387,7 +375,7 @@ namespace fast_planner {
         for (const Frontier &frontier: frontiers_) {
             bool no_view = true;
             for (const Viewpoint &view: frontier.viewpoints_) {
-                // Retrieve the first viewpoint that is far enough and has highest coverage
+                // Retrieve the first viewpoint that is far enough and has the highest coverage
                 if ((view.pos_ - cur_pos).norm() < min_candidate_dist_) continue;
                 points.push_back(view.pos_);
                 yaws.push_back(view.yaw_);
@@ -396,7 +384,7 @@ namespace fast_planner {
                 break;
             }
             if (no_view) {
-                // All viewpoints are very close, just use the first one (with highest coverage).
+                // All viewpoints are very close, just use the first one (with the highest coverage).
                 const Viewpoint &view = frontier.viewpoints_.front();
                 points.push_back(view.pos_);
                 yaws.push_back(view.yaw_);
@@ -411,32 +399,26 @@ namespace fast_planner {
         points.clear();
         yaws.clear();
         for (const int id: ids) {
-            // Scan all frontiers to find one with the same id
-            for (Frontier frontier: frontiers_) {
-                if (frontier.id_ == id) {
-                    cout << "id\t" << id << endl;
-                    // Get several top viewpoints that are far enough
-                    vector<Eigen::Vector3d> pts;
-                    vector<double> ys;
-                    int visib_thresh = frontier.viewpoints_.front().visible_num_ * max_decay;
-                    for (const Viewpoint &view: frontier.viewpoints_) {
-                        if (pts.size() >= view_num || view.visible_num_ <= visib_thresh) break;
-                        if ((view.pos_ - cur_pos).norm() < min_candidate_dist_) continue;
-                        pts.push_back(view.pos_);
-                        ys.push_back(view.yaw_);
-                    }
-                    if (pts.empty()) {
-                        // All viewpoints are very close, ignore the distance limit
-                        for (const Viewpoint &view: frontier.viewpoints_) {
-                            if (pts.size() >= view_num || view.visible_num_ <= visib_thresh) break;
-                            pts.push_back(view.pos_);
-                            ys.push_back(view.yaw_);
-                        }
-                    }
-                    points.push_back(pts);
-                    yaws.push_back(ys);
+            const Frontier &frontier = frontiers_[id];
+            vector<Eigen::Vector3d> pts;
+            vector<double> ys;
+            int visible_thresh = frontier.viewpoints_.front().visible_num_ * max_decay;
+            for (const Viewpoint &view: frontier.viewpoints_) {
+                if (pts.size() >= view_num || view.visible_num_ <= visible_thresh) break;
+                if ((view.pos_ - cur_pos).norm() < min_candidate_dist_) continue;
+                pts.push_back(view.pos_);
+                ys.push_back(view.yaw_);
+            }
+            if (pts.empty()) {
+                // All viewpoints are very close, ignore the distance limit
+                for (const Viewpoint &view: frontier.viewpoints_) {
+                    if (pts.size() >= view_num || view.visible_num_ <= visible_thresh) break;
+                    pts.push_back(view.pos_);
+                    ys.push_back(view.yaw_);
                 }
             }
+            points.push_back(pts);
+            yaws.push_back(ys);
         }
     }
 
@@ -478,8 +460,8 @@ namespace fast_planner {
     void FrontierFinder::getFullCostMatrix(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_yaw,
                                            Eigen::MatrixXd &mat) {
         // Use Asymmetric TSP
-        int dimen = frontiers_.size();
-        mat.resize(dimen + 1, dimen + 1);
+        int dimension = frontiers_.size();
+        mat.resize(dimension + 1, dimension + 1);
         std::cout << "mat size: " << mat.rows() << ", " << mat.cols() << std::endl;
         // Fill block for clusters
         for (int i = 0; i < frontiers_.size(); ++i) {
@@ -494,7 +476,7 @@ namespace fast_planner {
         for (int j = 0; j < frontiers_.size(); ++j) {
             Viewpoint vj = frontiers_[j].viewpoints_.front();
             vector<Vector3d> path;
-            mat(0,j + 1) =
+            mat(0, j + 1) =
                     ViewNode::computeCost(cur_pos, vj.pos_, cur_yaw[0], vj.yaw_, cur_vel, cur_yaw[1], path);
         }
     }
@@ -509,8 +491,10 @@ namespace fast_planner {
 
                 // Qualified viewpoint is in bounding box and in safe region
                 if (!edt_env_->sdf_map_->isInBox(sample_pos) ||
-                    edt_env_->sdf_map_->getInflateOccupancy(sample_pos) == 1 || isNearUnknown(sample_pos))
+                    edt_env_->sdf_map_->getInflateOccupancy(sample_pos) == 1 ||
+                    isNearUnknown(sample_pos)) {
                     continue;
+                }
 
                 // Compute average yaw
                 const vector<Vector3d> &cells = frontier.filtered_cells_;
@@ -537,7 +521,7 @@ namespace fast_planner {
         Vector3d update_min, update_max;
         edt_env_->sdf_map_->getUpdatedBox(update_min, update_max);
 
-        auto checkChanges = [&](const vector<Frontier> &frontiers) ->bool {
+        auto checkChanges = [&](const vector<Frontier> &frontiers) -> bool {
             for (const Frontier &ftr: frontiers) {
                 if (!haveOverlap(ftr.box_min_, ftr.box_max_, update_min, update_max)) continue;
                 const int change_thresh = min_view_finish_fraction_ * ftr.cells_.size();
@@ -545,16 +529,14 @@ namespace fast_planner {
                 for (const Vector3d &cell: ftr.cells_) {
                     Eigen::Vector3i idx;
                     edt_env_->sdf_map_->posToIndex(cell, idx);
-                    if (!(knownfree(idx) && isNeighborUnknown(idx)) && ++change_num >= change_thresh)
-                        return true;
+                    if (!(knownFree(idx) && isNeighborUnknown(idx))) { change_num++; }
+                    if (change_num >= change_thresh) { return true; }
                 }
             }
             return false;
         };
 
-        if (checkChanges(frontiers_) || checkChanges(dormant_frontiers_)) return true;
-
-        return false;
+        return (checkChanges(frontiers_) || checkChanges(dormant_frontiers_));
     }
 
     bool FrontierFinder::isNearUnknown(const Eigen::Vector3d &pos) {
@@ -571,17 +553,16 @@ namespace fast_planner {
 
     int FrontierFinder::countVisibleCells(const Eigen::Vector3d &pos, const double &yaw,
                                           const vector<Eigen::Vector3d> &cluster) {
-        percep_utils_->setPose(pos, yaw);
+        perception_utils_->setPose(pos, yaw);
         int visible_num = 0;
         Eigen::Vector3i idx;
         for (const Vector3d &cell: cluster) {
-            // Check if frontier cell is inside FOV
-            if (!percep_utils_->insideFOV(cell)) continue;
+            if (!perception_utils_->insideFOV(cell)) continue;
 
             // Check if frontier cell is visible (not occulded by obstacles)
-            raycaster_->input(cell, pos);
+            ray_caster_->input(cell, pos);
             bool is_visible = true;
-            while (raycaster_->nextId(idx)) {
+            while (ray_caster_->nextId(idx)) {
                 if (edt_env_->sdf_map_->getInflateOccupancy(idx) == 1 ||
                     edt_env_->sdf_map_->getOccupancy(idx) == SDFMap::UNKNOWN) {
                     is_visible = false;
@@ -593,11 +574,11 @@ namespace fast_planner {
         return visible_num;
     }
 
-    void FrontierFinder::downsample(
+    void FrontierFinder::downSample(
             const vector<Eigen::Vector3d> &cluster_in, vector<Eigen::Vector3d> &cluster_out) {
         // down sampling cluster
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloudf(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
         for (const Vector3d &cell: cluster_in)
             cloud->points.emplace_back(cell[0], cell[1], cell[2]);
 
@@ -605,10 +586,10 @@ namespace fast_planner {
         pcl::VoxelGrid<pcl::PointXYZ> sor;
         sor.setInputCloud(cloud);
         sor.setLeafSize(leaf_size, leaf_size, leaf_size);
-        sor.filter(*cloudf);
+        sor.filter(*filtered_cloud);
 
         cluster_out.clear();
-        for (const pcl::PointXYZ &pt: cloudf->points)
+        for (const pcl::PointXYZ &pt: filtered_cloud->points)
             cluster_out.emplace_back(pt.x, pt.y, pt.z);
     }
 
@@ -655,17 +636,17 @@ namespace fast_planner {
 
     inline bool FrontierFinder::isNeighborUnknown(const Eigen::Vector3i &voxel) {
         // At least one neighbor is unknown
-        vector<Eigen::Vector3i> nbrs = move(sixNeighbors(voxel));
-        return std::any_of(nbrs.begin(), nbrs.end(), [&](const Vector3i &nbr) -> bool {
+        vector<Eigen::Vector3i> neighbors = move(sixNeighbors(voxel));
+        return std::any_of(neighbors.begin(), neighbors.end(), [&](const Vector3i &nbr) -> bool {
             return edt_env_->sdf_map_->getOccupancy(nbr) == SDFMap::UNKNOWN;
         });
     }
 
-    inline int FrontierFinder::toadr(const Eigen::Vector3i &idx) {
+    inline int FrontierFinder::toAddress(const Eigen::Vector3i &idx) {
         return edt_env_->sdf_map_->toAddress(idx);
     }
 
-    inline bool FrontierFinder::knownfree(const Eigen::Vector3i &idx) {
+    inline bool FrontierFinder::knownFree(const Eigen::Vector3i &idx) {
         return edt_env_->sdf_map_->getOccupancy(idx) == SDFMap::FREE;
     }
 

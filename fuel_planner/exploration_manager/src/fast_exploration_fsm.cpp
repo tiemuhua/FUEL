@@ -175,11 +175,11 @@ namespace fast_planner {
                 bspline.pos_pts.push_back(pt);
             }
             Eigen::VectorXd knots = info->position_traj_.getKnot();
-            for (size_t i = 0; i < knots.rows(); ++i) {
+            for (Eigen::Index i = 0; i < knots.rows(); ++i) {
                 bspline.knots.push_back(knots(i));
             }
             Eigen::MatrixXd yaw_pts = info->yaw_traj_.getControlPoint();
-            for (size_t i = 0; i < yaw_pts.rows(); ++i) {
+            for (Eigen::Index i = 0; i < yaw_pts.rows(); ++i) {
                 double yaw = yaw_pts(i, 0);
                 bspline.yaw_pts.push_back(yaw);
             }
@@ -190,17 +190,18 @@ namespace fast_planner {
     }
 
     void FastExplorationFSM::visualize() {
-        auto info = &planner_manager_->local_data_;
-        auto ed_ptr = expl_manager_->ed_;
+        LocalTrajDataPtr info = LocalTrajDataPtr(&planner_manager_->local_data_);
+        ExplorationDataPtr ed_ptr = expl_manager_->ed_;
 
         // Draw frontier
-        static int last_ftr_num = 0;
+        static size_t last_ftr_num = 0;
         for (size_t i = 0; i < ed_ptr->frontiers_.size(); ++i) {
             visualization_->drawCubes(ed_ptr->frontiers_[i], 0.1,
                                       visualization_->getColor(double(i) / ed_ptr->frontiers_.size(), 0.4),
                                       "frontier", i, 4);
         }
-        for (int i = ed_ptr->frontiers_.size(); i < last_ftr_num; ++i) {
+        // Search new frontier within box slightly inflated from updated box
+        for (size_t i = ed_ptr->frontiers_.size(); i < last_ftr_num; ++i) {
             visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
         }
         last_ftr_num = ed_ptr->frontiers_.size();

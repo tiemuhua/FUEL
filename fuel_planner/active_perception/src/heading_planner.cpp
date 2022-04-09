@@ -497,7 +497,7 @@ namespace fast_planner {
                 raw_input->push_back(pcl::PointXYZ(p[0], p[1], p[2]));
         }
 
-        // downsample use voxel grid filter
+        // downSample use voxel grid filter
         std::cout << "num1: " << raw_input->points.size() << std::endl;
 
         pcl::VoxelGrid<pcl::PointXYZ> sor;

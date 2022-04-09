@@ -135,6 +135,7 @@ namespace fast_planner {
         NonUniformBspline position_traj_, velocity_traj_, acceleration_traj_, yaw_traj_, yawdot_traj_,
                 yawdotdot_traj_;
     };
+    typedef shared_ptr<LocalTrajData> LocalTrajDataPtr;
 
 // structure of trajectory info
     struct LocalTrajState {

@@ -76,7 +76,7 @@ namespace fast_planner {
 
         static void wrapYaw(double &yaw);
 
-        shared_ptr<PerceptionUtils> percep_utils_;
+        shared_ptr<PerceptionUtils> perception_utils_;
 
     private:
         void splitLargeFrontiers(vector<Frontier> &frontiers);
@@ -89,7 +89,7 @@ namespace fast_planner {
 
         void computeFrontierInfo(Frontier &frontier);
 
-        void downsample(const vector<Vector3d> &cluster_in, vector<Vector3d> &cluster_out);
+        void downSample(const vector<Vector3d> &cluster_in, vector<Vector3d> &cluster_out);
 
         void sampleViewpoints(Frontier &frontier);
 
@@ -106,26 +106,26 @@ namespace fast_planner {
         bool expandFrontier(const Eigen::Vector3i &first, Frontier &frontier);
 
         // Wrapper of sdf map
-        int toadr(const Eigen::Vector3i &idx);
+        int toAddress(const Eigen::Vector3i &idx);
 
-        bool knownfree(const Eigen::Vector3i &idx);
+        bool knownFree(const Eigen::Vector3i &idx);
 
         // Data
-        vector<bool> frontier_flag_;
+        vector<bool> is_in_frontier_;
         vector<Frontier> frontiers_, dormant_frontiers_;
-        size_t origin_frontiers_num_;
+        size_t origin_frontiers_num_{};
 
         // Params
-        int cluster_min_;
-        double cluster_size_xy_, cluster_size_z_;
-        double candidate_rmax_, candidate_rmin_, candidate_dphi_, min_candidate_dist_, min_candidate_clearance_;
-        int down_sample_;
-        double min_view_finish_fraction_, resolution_;
-        int min_visible_num_, candidate_rnum_;
+        int cluster_min_{};
+        double cluster_size_xy_{}, cluster_size_z_{};
+        double candidate_rmax_{}, candidate_rmin_{}, candidate_dphi_{}, min_candidate_dist_{}, min_candidate_clearance_{};
+        int down_sample_{};
+        double min_view_finish_fraction_{}, resolution_;
+        int min_visible_num_{}, candidate_rnum_{};
 
         // Utils
         shared_ptr<EDTEnvironment> edt_env_;
-        unique_ptr<RayCaster> raycaster_;
+        unique_ptr<RayCaster> ray_caster_;
     };
 
 }  // namespace fast_planner

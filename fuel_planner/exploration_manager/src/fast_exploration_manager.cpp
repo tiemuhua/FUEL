@@ -83,6 +83,7 @@ namespace fast_planner {
 
         // Search frontiers and group them into clusters
         ros::Time t1 = ros::Time::now(), t2 = ros::Time::now();
+        frontier_finder_->removeOutDatedFrontiers();
         frontier_finder_->searchAndAddFrontiers();
         double frontier_time = (ros::Time::now() - t1).toSec();
 
@@ -124,7 +125,7 @@ namespace fast_planner {
                 ed_->unrefined_points_.clear();
                 int knum = min(int(indices.size()), ep_->refined_num_);
                 for (size_t i = 0; i < knum; ++i) {
-                    auto tmp = ed_->points_[indices[i]];
+                    Vector3d tmp = ed_->points_[indices[i]];
                     ed_->unrefined_points_.push_back(tmp);
                     ed_->refined_ids_.push_back(indices[i]);
                     if ((tmp - pos).norm() > ep_->refined_radius_ && ed_->refined_ids_.size() >= 2) break;
@@ -153,8 +154,8 @@ namespace fast_planner {
                 ed_->refined_views2_.clear();
                 for (size_t i = 0; i < ed_->refined_points_.size(); ++i) {
                     vector<Vector3d> v1, v2;
-                    frontier_finder_->percep_utils_->setPose(ed_->refined_points_[i], refined_yaws[i]);
-                    frontier_finder_->percep_utils_->getFOV(v1, v2);
+                    frontier_finder_->perception_utils_->setPose(ed_->refined_points_[i], refined_yaws[i]);
+                    frontier_finder_->perception_utils_->getFOV(v1, v2);
                     ed_->refined_views1_.insert(ed_->refined_views1_.end(), v1.begin(), v1.end());
                     ed_->refined_views2_.insert(ed_->refined_views2_.end(), v2.begin(), v2.end());
                 }
