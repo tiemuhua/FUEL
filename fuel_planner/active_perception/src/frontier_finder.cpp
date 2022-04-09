@@ -58,7 +58,7 @@ namespace fast_planner {
         }
         cout << "origin frontiers size\t" << frontiers_.size() << endl;
         vector<Frontier> not_changed_frontiers;
-        for (int i = 0; i < frontiers_.size(); ++i) {
+        for (size_t i = 0; i < frontiers_.size(); ++i) {
             if (is_frontier_changed[i]) {
                 Vector3i idx;
                 for (const Vector3d &cell: frontiers_[i].cells_) {
@@ -78,7 +78,7 @@ namespace fast_planner {
         for (Frontier &frontier: frontiers_) {
             vector<double> costs;
             vector<vector<Vector3d>> paths;
-            for (int i = 0; i < frontier.costs_.size(); ++i) {
+            for (size_t i = 0; i < frontier.costs_.size(); ++i) {
                 if (!is_frontier_changed[i]) {
                     costs.push_back(frontier.costs_[i]);
                     paths.emplace_back(move(frontier.paths_[i]));
@@ -181,7 +181,6 @@ namespace fast_planner {
         std::cout << "\nnew num: " << new_num << ", new dormant: " << new_dormant_num << std::endl;
         std::cout << "to visit: " << frontiers_.size() << ", dormant: " << dormant_frontiers_.size()
                   << std::endl;
-
     }
 
     bool FrontierFinder::expandFrontier(const Eigen::Vector3i &first, Frontier &frontier) {
@@ -463,8 +462,8 @@ namespace fast_planner {
         int dimension = frontiers_.size();
         mat.resize(dimension + 1, dimension + 1);
         // Fill block for clusters
-        for (int i = 0; i < frontiers_.size(); ++i) {
-            for (int j = 0; j < frontiers_.size(); ++j) {
+        for (size_t i = 0; i < frontiers_.size(); ++i) {
+            for (size_t j = 0; j < frontiers_.size(); ++j) {
                 mat(i + 1, j + 1) = frontiers_[i].costs_[j];
             }
         }

@@ -1,5 +1,8 @@
 # FUEL
 
+this project is refactored by 郭筠陶(tiemuhua@126.com), 
+now it can run on ubuntu20.04, and the code is much more clearly.
+
 __News:__
 
 - Aug 24, 2021: The CPU-based simulation is released, CUDA is no longer required. Richer exploration environments are provided.
