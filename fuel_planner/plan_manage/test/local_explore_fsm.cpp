@@ -15,7 +15,7 @@ namespace fast_planner {
         nh.param("fsm/thresh_no_replan", no_replan_thresh_, -1.0);
 
         nh.param("fsm/waypoint_num", waypoint_num_, -1);
-        for (size_t i = 0; i < waypoint_num_; i++) {
+        for (int i = 0; i < waypoint_num_; i++) {
             nh.param("fsm/waypoint" + to_string(i) + "_x", waypoints_[i][0], -1.0);
             nh.param("fsm/waypoint" + to_string(i) + "_y", waypoints_[i][1], -1.0);
             nh.param("fsm/waypoint" + to_string(i) + "_z", waypoints_[i][2], -1.0);
@@ -147,7 +147,7 @@ namespace fast_planner {
 
             case EXEC_TRAJ: {
                 /* determine if need to replan */
-                LocalTrajData *info = &planner_manager_->local_data_;
+                LocalTrajDataPtr info = planner_manager_->local_data_;
                 ros::Time time_now = ros::Time::now();
                 double t_cur = (time_now - info->start_time_).toSec();
                 t_cur = min(info->duration_, t_cur);
@@ -168,7 +168,7 @@ namespace fast_planner {
             }
 
             case REPLAN_TRAJ: {
-                LocalTrajData *info = &planner_manager_->local_data_;
+                LocalTrajDataPtr info = planner_manager_->local_data_;
                 ros::Time time_now = ros::Time::now();
                 double t_cur = (time_now - info->start_time_).toSec();
 
@@ -197,7 +197,7 @@ namespace fast_planner {
     }
 
     void LocalExploreFSM::checkCollisionCallback(const ros::TimerEvent &e) {
-        LocalTrajData *info = &planner_manager_->local_data_;
+        LocalTrajDataPtr info = planner_manager_->local_data_;
 
         if (have_target_) {
             auto edt_env = planner_manager_->edt_environment_;
@@ -208,7 +208,6 @@ namespace fast_planner {
 
             if (dist <= 0.3) {
                 /* try to find a max distance goal around */
-                bool new_goal = false;
                 const double dr = 0.5, dtheta = 30, dz = 0.3;
                 double new_x, new_y, new_z, max_dist = -1.0;
                 Eigen::Vector3d goal;
@@ -280,7 +279,7 @@ namespace fast_planner {
         if (plan_success) {
             planner_manager_->planYaw(start_yaw_);
 
-            auto info = &planner_manager_->local_data_;
+            LocalTrajDataPtr info = planner_manager_->local_data_;
 
             /* publish traj */
             bspline::Bspline bspline;
@@ -290,7 +289,7 @@ namespace fast_planner {
 
             Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
 
-            for (size_t i = 0; i < pos_pts.rows(); ++i) {
+            for (Eigen::Index i = 0; i < pos_pts.rows(); ++i) {
                 geometry_msgs::Point pt;
                 pt.x = pos_pts(i, 0);
                 pt.y = pos_pts(i, 1);
@@ -299,12 +298,12 @@ namespace fast_planner {
             }
 
             Eigen::VectorXd knots = info->position_traj_.getKnot();
-            for (size_t i = 0; i < knots.rows(); ++i) {
+            for (Eigen::Index i = 0; i < knots.rows(); ++i) {
                 bspline.knots.push_back(knots(i));
             }
 
             Eigen::MatrixXd yaw_pts = info->yaw_traj_.getControlPoint();
-            for (size_t i = 0; i < yaw_pts.rows(); ++i) {
+            for (Eigen::Index i = 0; i < yaw_pts.rows(); ++i) {
                 double yaw = yaw_pts(i, 0);
                 bspline.yaw_pts.push_back(yaw);
             }
@@ -313,7 +312,7 @@ namespace fast_planner {
             bspline_pub_.publish(bspline);
 
             /* visulization */
-            auto plan_data = &planner_manager_->plan_data_;
+            MidPlanDataPtr plan_data = planner_manager_->plan_data_;
 
             visualization_->drawGeometricPath(plan_data->kino_path_, 0.1, Eigen::Vector4d(1, 0, 0, 1));
 

@@ -52,9 +52,9 @@ namespace fast_planner {
         static void calcNextYaw(const double &last_yaw, double &yaw);
 
         PlanParameters pp_;
-        LocalTrajData local_data_;
-        GlobalTrajData global_data_;
-        MidPlanData plan_data_;
+        LocalTrajDataPtr local_data_;
+        GlobalTrajDataPtr global_data_;
+        MidPlanDataPtr plan_data_;
         EDTEnvironment::Ptr edt_environment_;
         unique_ptr<Astar> astar_path_finder_;
 

@@ -11,6 +11,7 @@
 #include <active_perception/traj_visibility.h>
 
 using std::vector;
+using std::shared_ptr;
 
 namespace fast_planner {
     class GlobalTrajData {
@@ -109,7 +110,7 @@ namespace fast_planner {
             getTrajInfoInDuration(start_t, duration, dt, point_set, start_end_derivative);
         }
     };
-
+    typedef shared_ptr<GlobalTrajData> GlobalTrajDataPtr;
     struct PlanParameters {
         /* planning algorithm parameters */
         double max_vel_{}, max_acc_{}, max_jerk_{};  // physical limits
@@ -270,7 +271,7 @@ namespace fast_planner {
             topo_select_paths_ = selected_paths;
         }
     };
-
+    typedef shared_ptr<MidPlanData> MidPlanDataPtr;
 }  // namespace fast_planner
 
 #endif

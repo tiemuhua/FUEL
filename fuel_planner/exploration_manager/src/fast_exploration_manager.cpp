@@ -124,7 +124,7 @@ namespace fast_planner {
                 ed_->refined_ids_.clear();
                 ed_->unrefined_points_.clear();
                 int knum = min(int(indices.size()), ep_->refined_num_);
-                for (size_t i = 0; i < knum; ++i) {
+                for (int i = 0; i < knum; ++i) {
                     Vector3d tmp = ed_->points_[indices[i]];
                     ed_->unrefined_points_.push_back(tmp);
                     ed_->refined_ids_.push_back(indices[i]);
@@ -251,7 +251,7 @@ namespace fast_planner {
                 return FAIL;
         }
 
-        if (planner_manager_->local_data_.position_traj_.getTimeSum() < time_lb - 0.1)
+        if (planner_manager_->local_data_->position_traj_.getTimeSum() < time_lb - 0.1)
             ROS_ERROR("Lower bound not satified!");
 
         double traj_plan_time = (ros::Time::now() - t1).toSec();
@@ -325,8 +325,8 @@ namespace fast_planner {
         const int scale = 100;
         // Use Asymmetric TSP
 
-        for (size_t i = 0; i < dimension; ++i) {
-            for (size_t j = 0; j < dimension; ++j) {
+        for (int i = 0; i < dimension; ++i) {
+            for (int j = 0; j < dimension; ++j) {
                 int int_cost = cost_mat(i, j) * scale;
                 prob_file << int_cost << " ";
             }

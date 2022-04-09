@@ -84,7 +84,7 @@ namespace fast_planner {
                     fd_->start_yaw_(1) = fd_->start_yaw_(2) = 0.0;
                 } else {
                     // Replan from non-static state, starting from 'replan_time' seconds later
-                    LocalTrajData *info = &planner_manager_->local_data_;
+                    LocalTrajDataPtr info = planner_manager_->local_data_;
                     double t_r = (ros::Time::now() - info->start_time_).toSec() + fp_->replan_time_;
 
                     fd_->start_pt_ = info->position_traj_.evaluateDeBoorT(t_r);
@@ -125,7 +125,7 @@ namespace fast_planner {
             }
 
             case EXEC_TRAJ: {
-                LocalTrajData *info = &planner_manager_->local_data_;
+                LocalTrajDataPtr info = planner_manager_->local_data_;
                 double t_cur = (ros::Time::now() - info->start_time_).toSec();
 
                 // Replan if traj is almost fully executed
@@ -159,7 +159,7 @@ namespace fast_planner {
         classic_ = false;
 
         if (res == SUCCEED) {
-            auto info = &planner_manager_->local_data_;
+            LocalTrajDataPtr info = planner_manager_->local_data_;
             info->start_time_ = (ros::Time::now() - time_r).toSec() > 0 ? ros::Time::now() : time_r;
 
             bspline::Bspline bspline;
@@ -190,7 +190,7 @@ namespace fast_planner {
     }
 
     void FastExplorationFSM::visualize() {
-        LocalTrajDataPtr info = LocalTrajDataPtr(&planner_manager_->local_data_);
+        LocalTrajDataPtr info = planner_manager_->local_data_;
         ExplorationDataPtr ed_ptr = expl_manager_->ed_;
 
         // Draw frontier

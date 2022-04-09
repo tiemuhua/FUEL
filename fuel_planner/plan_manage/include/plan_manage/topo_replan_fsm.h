@@ -64,7 +64,7 @@ namespace fast_planner {
         bool callSearchAndOptimization();    // front-end and back-end method
         bool callTopologicalTraj(int step);  // topo path guided gradient-based
         // optimization; 1: new, 2: replan
-        void changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call);
+        void changeFSMExecState(FSM_EXEC_STATE new_state, const string& pos_call);
 
         void printFSMExecState();
 

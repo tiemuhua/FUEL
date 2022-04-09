@@ -63,8 +63,8 @@ namespace fast_planner {
                 Vector3i idx;
                 for (const Vector3d &cell: frontiers_[i].cells_) {
                     edt_env_->sdf_map_->posToIndex(cell, idx);
+                    is_in_frontier_[toAddress(idx)] = false;
                 }
-                is_in_frontier_[toAddress(idx)] = false;
             } else {
                 not_changed_frontiers.emplace_back(move(frontiers_[i]));
             }
@@ -106,8 +106,8 @@ namespace fast_planner {
                 Vector3i idx;
                 for (const Vector3d &cell: dormant_frontiers_[i].cells_) {
                     edt_env_->sdf_map_->posToIndex(cell, idx);
+                    is_in_frontier_[toAddress(idx)] = false;
                 }
-                is_in_frontier_[toAddress(idx)] = false;
             } else {
                 not_changed_dormant_frontiers.emplace_back(move(dormant_frontiers_[i]));
             }
@@ -136,8 +136,6 @@ namespace fast_planner {
         edt_env_->sdf_map_->posToIndex(search_max, max_id);
 
         vector<Frontier> tmp_frontiers;
-        cout << "min\t" << min_id.transpose() << endl;
-        cout << "max\t" << max_id.transpose() << endl;
         for (int x = min_id(0); x <= max_id(0); ++x)
             for (int y = min_id(1); y <= max_id(1); ++y)
                 for (int z = min_id(2); z <= max_id(2); ++z) {
@@ -335,7 +333,9 @@ namespace fast_planner {
         for (Eigen::Index i = 0; i < 3; ++i) {
             box_min[i] = max(min1[i], min2[i]);
             box_max[i] = min(max1[i], max2[i]);
-            if (box_min[i] > box_max[i] + 1e-3) return false;
+            if (box_min[i] > box_max[i] + 1e-3) {
+                return false;
+            }
         }
         return true;
     }
@@ -462,11 +462,9 @@ namespace fast_planner {
         // Use Asymmetric TSP
         int dimension = frontiers_.size();
         mat.resize(dimension + 1, dimension + 1);
-        std::cout << "mat size: " << mat.rows() << ", " << mat.cols() << std::endl;
         // Fill block for clusters
         for (int i = 0; i < frontiers_.size(); ++i) {
             for (int j = 0; j < frontiers_.size(); ++j) {
-                cout << "i\t" << i << "\tj\t" << j << endl;
                 mat(i + 1, j + 1) = frontiers_[i].costs_[j];
             }
         }

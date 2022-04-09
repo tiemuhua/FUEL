@@ -591,7 +591,6 @@ namespace fast_planner {
         if (cost < opt->min_cost_) {
             opt->min_cost_ = cost;
             opt->best_variable_ = x;
-            std::cout << cost << ", ";
         }
         return cost;
     }

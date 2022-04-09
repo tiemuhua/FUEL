@@ -2,7 +2,6 @@
 #include <plan_manage/topo_replan_fsm.h>
 
 namespace fast_planner {
-//    void TopoReplanFSM::init(ros::NodeHandle &nh) {
     TopoReplanFSM::TopoReplanFSM(ros::NodeHandle &nh) {
         current_wp_ = 0;
         exec_state_ = FSM_EXEC_STATE::INIT;
@@ -23,13 +22,11 @@ namespace fast_planner {
 
         /* initialize main modules */
         planner_manager_.reset(new FastPlannerManager(nh));
-//        planner_manager_->initPlanModules(nh);
         visualization_.reset(new PlanningVisualization(nh));
 
         /* callback */
         exec_timer_ = nh.createTimer(ros::Duration(0.01), &TopoReplanFSM::execFSMCallback, this);
         safety_timer_ = nh.createTimer(ros::Duration(0.05), &TopoReplanFSM::checkCollisionCallback, this);
-        // frontier_timer_ = nh.createTimer(ros::Duration(0.1), &TopoReplanFSM::frontierCallback, this);
 
         waypoint_sub_ =
                 nh.subscribe("/waypoint_generator/waypoints", 1, &TopoReplanFSM::waypointCallback, this);
@@ -99,17 +96,15 @@ namespace fast_planner {
         have_odom_ = true;
     }
 
-    void TopoReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call) {
-        string state_str[6] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "REPLAN_"
-                                                                                                  "NEW"};
+    void TopoReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, const string& pos_call) {
+        string state_str[7] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "REPLAN_","NEW"};
         int pre_s = int(exec_state_);
         exec_state_ = new_state;
         cout << "[" + pos_call + "]: from " + state_str[pre_s] + " to " + state_str[int(new_state)] << endl;
     }
 
     void TopoReplanFSM::printFSMExecState() {
-        string state_str[6] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "REPLAN_"
-                                                                                                  "NEW"};
+        string state_str[7] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "REPLAN_","NEW"};
         cout << "state: " + state_str[int(exec_state_)] << endl;
     }
 
@@ -165,7 +160,7 @@ namespace fast_planner {
             case EXEC_TRAJ: {
                 /* determine if need to replan */
 
-                GlobalTrajData *global_data = &planner_manager_->global_data_;
+                GlobalTrajDataPtr global_data = planner_manager_->global_data_;
                 ros::Time time_now = ros::Time::now();
                 double t_cur = (time_now - global_data->global_start_time_).toSec();
 
@@ -173,7 +168,7 @@ namespace fast_planner {
                     have_target_ = false;
                     changeFSMExecState(WAIT_TARGET, "FSM");
                 } else {
-                    LocalTrajData *info = &planner_manager_->local_data_;
+                    LocalTrajDataPtr info = planner_manager_->local_data_;
                     t_cur = (time_now - info->start_time_).toSec();
 
                     if (t_cur > replan_time_threshold_) {
@@ -194,7 +189,7 @@ namespace fast_planner {
             }
 
             case REPLAN_TRAJ: {
-                LocalTrajData *info = &planner_manager_->local_data_;
+                LocalTrajDataPtr info = planner_manager_->local_data_;
                 ros::Time time_now = ros::Time::now();
                 double t_cur = (time_now - info->start_time_).toSec();
 
@@ -216,7 +211,7 @@ namespace fast_planner {
                 break;
             }
             case REPLAN_NEW: {
-                LocalTrajData *info = &planner_manager_->local_data_;
+                LocalTrajDataPtr info = planner_manager_->local_data_;
                 ros::Time time_now = ros::Time::now();
                 double t_cur = (time_now - info->start_time_).toSec();
 
@@ -241,69 +236,9 @@ namespace fast_planner {
     }
 
     void TopoReplanFSM::checkCollisionCallback(const ros::TimerEvent &e) {
-        LocalTrajData *info = &planner_manager_->local_data_;
+        LocalTrajDataPtr info = planner_manager_->local_data_;
 
         /* ---------- check goal safety ---------- */
-        // if (have_target_)
-        if (false) {
-            auto edt_env = planner_manager_->edt_environment_;
-
-            double dist = planner_manager_->pp_.dynamic_ ?
-                          edt_env->evaluateCoarseEDT(target_point_, /* time to program start */ info->duration_) :
-                          edt_env->evaluateCoarseEDT(target_point_, -1.0);
-
-            if (dist <= 0.3) {
-                /* try to find a max distance goal around */
-                bool new_goal = false;
-                const double dr = 0.5, dtheta = 30, dz = 0.3;
-
-                double new_x, new_y, new_z, max_dist = -1.0;
-                Eigen::Vector3d goal;
-
-                for (double r = dr; r <= 5 * dr + 1e-3; r += dr) {
-                    for (double theta = -90; theta <= 270; theta += dtheta) {
-                        for (double nz = 1 * dz; nz >= -1 * dz; nz -= dz) {
-                            new_x = target_point_(0) + r * cos(theta / 57.3);
-                            new_y = target_point_(1) + r * sin(theta / 57.3);
-                            new_z = target_point_(2) + nz;
-                            Eigen::Vector3d new_pt(new_x, new_y, new_z);
-
-                            dist = planner_manager_->pp_.dynamic_ ?
-                                   edt_env->evaluateCoarseEDT(new_pt,
-                                           /* time to program start */ info->duration_) :
-                                   edt_env->evaluateCoarseEDT(new_pt, -1.0);
-
-                            if (dist > max_dist) {
-                                /* reset target_point_ */
-                                goal(0) = new_x;
-                                goal(1) = new_y;
-                                goal(2) = new_z;
-                                max_dist = dist;
-                            }
-                        }
-                    }
-                }
-
-                if (max_dist > 0.3) {
-                    cout << "change goal, replan." << endl;
-                    target_point_ = goal;
-                    have_target_ = true;
-                    end_vel_.setZero();
-
-                    if (exec_state_ == EXEC_TRAJ) {
-                        changeFSMExecState(REPLAN_NEW, "SAFETY");
-                    }
-
-                    visualization_->drawGoal(target_point_, 0.3, Eigen::Vector4d(1, 0, 0, 1.0));
-                } else {
-                    // have_target_ = false;
-                    // cout << "Goal near collision, stop." << endl;
-                    // changeFSMExecState(WAIT_TARGET, "SAFETY");
-                    cout << "goal near collision, keep retry" << endl;
-                    changeFSMExecState(REPLAN_TRAJ, "FSM");
-                }
-            }
-        }
 
         /* ---------- check trajectory ---------- */
         if (exec_state_ == EXEC_TRAJ || exec_state_ == REPLAN_TRAJ) {
@@ -330,7 +265,7 @@ namespace fast_planner {
     void TopoReplanFSM::frontierCallback(const ros::TimerEvent &e) {
         if (!have_odom_) return;
         planner_manager_->searchFrontier(odom_pos_);
-        visualization_->drawFrontier(planner_manager_->plan_data_.frontiers_);
+        visualization_->drawFrontier(planner_manager_->plan_data_->frontiers_);
     }
 
     bool TopoReplanFSM::callSearchAndOptimization() {
@@ -356,19 +291,19 @@ namespace fast_planner {
                 replan_time2_[replan_time2_.size() - 1] += (ros::Time::now() - t1).toSec();
             }
 
-            LocalTrajData *locdat = &planner_manager_->local_data_;
+            LocalTrajDataPtr local_data = planner_manager_->local_data_;
 
             /* publish newest trajectory to server */
 
             /* publish traj */
             bspline::Bspline bspline;
             bspline.order = planner_manager_->pp_.bspline_degree_;
-            bspline.start_time = locdat->start_time_;
-            bspline.traj_id = locdat->traj_id_;
+            bspline.start_time = local_data->start_time_;
+            bspline.traj_id = local_data->traj_id_;
 
-            Eigen::MatrixXd pos_pts = locdat->position_traj_.getControlPoint();
+            Eigen::MatrixXd pos_pts = local_data->position_traj_.getControlPoint();
 
-            for (size_t i = 0; i < pos_pts.rows(); ++i) {
+            for (Eigen::Index i = 0; i < pos_pts.rows(); ++i) {
                 geometry_msgs::Point pt;
                 pt.x = pos_pts(i, 0);
                 pt.y = pos_pts(i, 1);
@@ -376,68 +311,30 @@ namespace fast_planner {
                 bspline.pos_pts.push_back(pt);
             }
 
-            Eigen::VectorXd knots = locdat->position_traj_.getKnot();
-            for (size_t i = 0; i < knots.rows(); ++i) {
+            Eigen::VectorXd knots = local_data->position_traj_.getKnot();
+            for (Eigen::Index i = 0; i < knots.rows(); ++i) {
                 bspline.knots.push_back(knots(i));
             }
 
-            Eigen::MatrixXd yaw_pts = locdat->yaw_traj_.getControlPoint();
-            for (size_t i = 0; i < yaw_pts.rows(); ++i) {
+            Eigen::MatrixXd yaw_pts = local_data->yaw_traj_.getControlPoint();
+            for (Eigen::Index i = 0; i < yaw_pts.rows(); ++i) {
                 double yaw = yaw_pts(i, 0);
                 bspline.yaw_pts.push_back(yaw);
             }
-            bspline.yaw_dt = locdat->yaw_traj_.getKnotSpan();
+            bspline.yaw_dt = local_data->yaw_traj_.getKnotSpan();
 
             bspline_pub_.publish(bspline);
 
             /* visualize new trajectories */
+            MidPlanDataPtr plan_data = planner_manager_->plan_data_;
 
-            MidPlanData *plan_data = &planner_manager_->plan_data_;
-
-            visualization_->drawPolynomialTraj(planner_manager_->global_data_.global_traj_, 0.05,
+            visualization_->drawPolynomialTraj(planner_manager_->global_data_->global_traj_, 0.05,
                                                Eigen::Vector4d(0, 0, 0, 1), 0);
-            visualization_->drawBspline(locdat->position_traj_, 0.08, Eigen::Vector4d(1.0, 0.0, 0.0, 1), true,
+            visualization_->drawBspline(local_data->position_traj_, 0.08, Eigen::Vector4d(1.0, 0.0, 0.0, 1), true,
                                         0.15, Eigen::Vector4d(1, 1, 0, 1), 99);
             visualization_->drawBsplinesPhase2(plan_data->topo_traj_pos1_, 0.08);
-
-            // visualization_->drawBspline(locdat->position_traj_, 0.08, Eigen::Vector4d(1.0, 0.0, 0.0, 1),
-            // false, 0.15,
-            //                             Eigen::Vector4d(1.0, 1.0, 1.0, 1), 99, 99);
-            // visualization_->drawBspline(plan_data->no_visib_traj_, 0.08, Eigen::Vector4d(0.0,
-            // 1.0, 1.0, 0.8),
-            //                             true, 0.15, Eigen::Vector4d(1.0, 1.0, 1.0, 1), 98, 98);
-
-            // visualization_->drawTopoPathsPhase2(plan_data->topo_select_paths_, 0.05);
-
             visualization_->drawViewConstraint(plan_data->view_cons_);
-            visualization_->drawYawTraj(locdat->position_traj_, locdat->yaw_traj_, plan_data->dt_yaw_);
-            // visualization_->drawYawPath(locdat->position_traj_, plan_data->path_yaw_,
-            // plan_data->dt_yaw_path_);
-
-            // visualization_->drawBspline(plan_data->no_visib_traj_, 0.08,
-            //                             Eigen::Vector4d(0.0, 0.0, 1.0, 0.8), false,
-            //                             0.1, Eigen::Vector4d(), 98);
-
-            // visualization_->drawTopoGraph(planner_manager_->topo_graphs_,
-            // 0.15, 0.05, Eigen::Vector4d(1, 0, 0, 1),
-            //                               Eigen::Vector4d(0, 1, 0, 1),
-            //                               Eigen::Vector4d(0, 0, 1, 1));
-
-            // visualization_->drawTopoPathsPhase1(plan_data->topo_paths_, 0.05);
-            // visualization_->drawBsplinesPhase1(plan_data->topo_traj_pos1_,
-            // 0.065);
-
-            // // benchmark, calculate replan time min max mean
-            // double mean1 = 0.0;
-            // double mean2 = 0.0;
-            // for (auto t : replan_time_)
-            //   mean1 += t;
-            // for (auto t : replan_time2_)
-            //   mean2 += t;
-            // mean1 /= replan_time_.size();
-            // mean2 /= replan_time2_.size();
-            // ROS_WARN("Replan number: %d, mean traj: %lf, mean yaw: %lf", replan_time_.size(), mean1, mean2);
-
+            visualization_->drawYawTraj(local_data->position_traj_, local_data->yaw_traj_, plan_data->dt_yaw_);
             return true;
         } else {
             return false;
