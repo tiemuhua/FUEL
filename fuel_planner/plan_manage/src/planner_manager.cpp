@@ -442,8 +442,6 @@ namespace fast_planner {
         vector<Eigen::Vector3d> start, end;
         tmp_traj.getBoundaryStates(2, 0, start, end);
 
-        // std::cout << "ctrl pt num: " << ctrl_pts.rows() << std::endl;
-
         // Discretize the guide path and align it with B-spline control points
         vector<Eigen::Vector3d> tmp_pts, guide_pts;
         if (pp_.bspline_degree_ == 3 || pp_.bspline_degree_ == 5) {
@@ -457,8 +455,6 @@ namespace fast_planner {
             }
             if (guide_pts.size() != int(ctrl_pts.rows()) - 8) ROS_WARN("Incorrect guide for 4 degree");
         }
-
-        // std::cout << "guide pt num: " << guide_pt.size() << std::endl;
 
         double tm1 = (ros::Time::now() - t1).toSec();
         t1 = ros::Time::now();
@@ -479,7 +475,7 @@ namespace fast_planner {
         plan_data_->topo_traj_pos2_[traj_id] = NonUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
 
         double tm3 = (ros::Time::now() - t1).toSec();
-        // ROS_INFO("optimization %d cost %lf, %lf, %lf seconds.", traj_id, tm1, tm2, tm3);
+        ROS_INFO("optimization %d cost %lf, %lf, %lf seconds.", traj_id, tm1, tm2, tm3);
     }
 
     Eigen::MatrixXd FastPlannerManager::paramLocalTraj(double start_t, double &dt, double &duration) {
@@ -637,7 +633,7 @@ namespace fast_planner {
         local_data_->yawdotdot_traj_ = local_data_->yawdot_traj_.getDerivative();
 
         vector<double> path_yaw;
-        for (size_t i = 0; i < waypts.size(); ++i) path_yaw.push_back(waypts[i][0]);
+        for (const Vector3d & waypt : waypts) path_yaw.push_back(waypt[0]);
         plan_data_->path_yaw_ = path_yaw;
         plan_data_->dt_yaw_ = dt_yaw;
         plan_data_->dt_yaw_path_ = dt_yaw;
@@ -715,16 +711,11 @@ namespace fast_planner {
         bspline_optimizers_[1]->setWaypoints(waypts, waypt_idx);
         bspline_optimizers_[1]->optimize(yaw, dt_yaw, cost_func, 1, 1);
 
-        // std::cout << "2: " << (ros::Time::now() - t1).toSec() << std::endl;
-
         // Update traj info
         local_data_->yaw_traj_.setUniformBspline(yaw, 3, dt_yaw);
         local_data_->yawdot_traj_ = local_data_->yaw_traj_.getDerivative();
         local_data_->yawdotdot_traj_ = local_data_->yawdot_traj_.getDerivative();
         plan_data_->dt_yaw_ = dt_yaw;
-
-        // plan_data_->path_yaw_ = path;
-        // plan_data_->dt_yaw_path_ = dt_yaw * subsp;
     }
 
     void FastPlannerManager::calcNextYaw(const double &last_yaw, double &yaw) {

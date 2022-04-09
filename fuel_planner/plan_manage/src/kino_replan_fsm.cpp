@@ -22,7 +22,6 @@ namespace fast_planner {
 
         /* initialize main modules */
         planner_manager_.reset(new FastPlannerManager(nh));
-//        planner_manager_->initPlanModules(nh);
         visualization_.reset(new PlanningVisualization(nh));
 
         /* callback */
@@ -251,9 +250,6 @@ namespace fast_planner {
 
                     visualization_->drawGoal(end_pt_, 0.3, Eigen::Vector4d(1, 0, 0, 1.0));
                 } else {
-                    // have_target_ = false;
-                    // cout << "Goal near collision, stop." << endl;
-                    // changeFSMExecState(WAIT_TARGET, "SAFETY");
                     cout << "goal near collision, keep retry" << endl;
                     changeFSMExecState(REPLAN_TRAJ, "FSM");
 

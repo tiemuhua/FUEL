@@ -11,7 +11,6 @@
 using Eigen::Vector4d;
 
 namespace fast_planner {
-//    void FastExplorationFSM::init(ros::NodeHandle &nh) {
     FastExplorationFSM::FastExplorationFSM(ros::NodeHandle &nh) {
         fp_.reset(new FSMParam);
         fd_.reset(new FSMData);
