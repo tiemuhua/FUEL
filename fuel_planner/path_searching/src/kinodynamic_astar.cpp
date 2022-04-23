@@ -26,7 +26,7 @@ namespace fast_planner {
         nh.param("search/allocate_num", allocate_num_, -1);
         nh.param("search/check_num", check_num_, -1);
         nh.param("search/optimistic", optimistic_, true);
-        tie_breaker_ = 1.0 + 1.0 / 10000;
+        tie_breaker_ = 1.0 / 10000;
 
         double vel_margin;
         nh.param("search/vel_margin", vel_margin, 0.0);

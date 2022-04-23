@@ -102,7 +102,7 @@ namespace fast_planner {
         }
         vector<Frontier> not_changed_dormant_frontiers;
         for (int i = 0; i < dormant_frontiers_.size(); ++i) {
-            if (is_frontier_changed[i]) {
+            if (is_dormant_frontiers_changed[i]) {
                 Vector3i idx;
                 for (const Vector3d &cell: dormant_frontiers_[i].cells_) {
                     edt_env_->sdf_map_->posToIndex(cell, idx);
