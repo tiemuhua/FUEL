@@ -9,6 +9,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <visualization_msgs/Marker.h>
+#include <ostream>
 
 namespace fast_planner {
 // SECTION interfaces for setup and query
@@ -662,7 +663,11 @@ namespace fast_planner {
         states2pts << 1.0, -dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw, 1.0, 0.0, -(1 / 6.0) * dt_yaw * dt_yaw,
                 1.0, dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw;
         yaw.block<3, 1>(0, 0) = states2pts * start_yaw3d;
+        string log_file_name = "/home/gjt/fuel_ws/planner_manager.log";
+        ofstream fout;
+        fout.open(log_file_name);
 
+        fout<<1<<endl;
         // Add waypoint constraints if look forward is enabled
         vector<Eigen::Vector3d> waypts;
         vector<int> waypt_idx;
@@ -688,16 +693,20 @@ namespace fast_planner {
                 waypt_idx.push_back(i);
             }
         }
+        fout<<2<<endl;
+
         // Final state
         Eigen::Vector3d end_yaw3d(end_yaw, 0, 0);
         calcNextYaw(last_yaw, end_yaw3d(0));
         yaw.block<3, 1>(seg_num, 0) = states2pts * end_yaw3d;
+        fout<<3<<endl;
 
         // Debug rapid change of yaw
         if (fabs(start_yaw3d[0] - end_yaw3d[0]) >= M_PI) {
             ROS_ERROR("Yaw change rapidly!");
             std::cout << "start yaw: " << start_yaw3d[0] << ", " << end_yaw3d[0] << std::endl;
         }
+        fout<<4<<endl;
 
         auto t1 = ros::Time::now();
 
@@ -707,14 +716,21 @@ namespace fast_planner {
         vector<Eigen::Vector3d> start = {Eigen::Vector3d(start_yaw3d[0], 0, 0),
                                          Eigen::Vector3d(start_yaw3d[1], 0, 0), Eigen::Vector3d(start_yaw3d[2], 0, 0)};
         vector<Eigen::Vector3d> end = {Eigen::Vector3d(end_yaw3d[0], 0, 0), Eigen::Vector3d(0, 0, 0)};
+        fout<<5<<endl;
         bspline_optimizers_[1]->setBoundaryStates(start, end);
+        fout<<6<<endl;
         bspline_optimizers_[1]->setWaypoints(waypts, waypt_idx);
+        fout<<7<<endl;
         bspline_optimizers_[1]->optimize(yaw, dt_yaw, cost_func, 1, 1);
+        fout<<8<<endl;
 
         // Update traj info
         local_data_->yaw_traj_.setUniformBspline(yaw, 3, dt_yaw);
+        fout<<9<<endl;
         local_data_->yawdot_traj_ = local_data_->yaw_traj_.getDerivative();
+        fout<<10<<endl;
         local_data_->yawdotdot_traj_ = local_data_->yawdot_traj_.getDerivative();
+        fout<<11<<endl;
         plan_data_->dt_yaw_ = dt_yaw;
     }
 

@@ -75,7 +75,7 @@ namespace fast_planner {
         if (cost_function_ & VIEWCONS) cost_str += " view  |";
         if (cost_function_ & MINTIME) cost_str += " time  |";
 
-        ROS_INFO_STREAM("cost func: " << cost_str);
+        // ROS_INFO_STREAM("cost func: " << cost_str);
     }
 
     void BsplineOptimizer::setGuidePath(const vector<Eigen::Vector3d> &guide_pt) {
@@ -201,9 +201,7 @@ namespace fast_planner {
         auto t1 = ros::Time::now();
         try {
             double final_cost;
-            cout << "begin nlopt" << endl;
             nlopt::result result = opt.optimize(q, final_cost);
-            cout << "nlopt end\n";
         } catch (std::exception &e) {
             cout << "std exception\t" << e.what() << endl;
         }
@@ -215,8 +213,8 @@ namespace fast_planner {
         if (optimize_time_) knot_span_ = best_variable_[variable_num_ - 1];
 
         if (cost_function_ & MINTIME) {
-            std::cout << "Iter num: " << iter_num_ << ", time: " << (ros::Time::now() - t1).toSec()
-                      << ", point num: " << point_num_ << ", comb time: " << comb_time << std::endl;
+            // std::cout << "Iter num: " << iter_num_ << ", time: " << (ros::Time::now() - t1).toSec()
+            //           << ", point num: " << point_num_ << ", comb time: " << comb_time << std::endl;
         }
     }
 

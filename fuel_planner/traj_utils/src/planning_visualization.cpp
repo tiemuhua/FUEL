@@ -1,5 +1,6 @@
 #include <traj_utils/planning_visualization.h>
-
+#include <ostream>
+#include <fstream>
 using std::cout;
 using std::endl;
 namespace fast_planner {
@@ -15,9 +16,7 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   predict_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/prediction", 100);
   pubs_.push_back(predict_pub_);
 
-  visib_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/"
-                                                          "visib_constraint",
-                                                          100);
+  visib_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/visib_constraint",100);
   pubs_.push_back(visib_pub_);
 
   frontier_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/frontier", 10000);
@@ -343,10 +342,22 @@ void PlanningVisualization::drawBspline(NonUniformBspline& bspline, double size,
   double tm, tmp;
   bspline.getTimeSpan(tm, tmp);
 
+  std::string log_file_name = "/home/gjt/fuel_ws/visualization.log";
+  std::ofstream fout;
+  fout.open(log_file_name);
+
+  const char str1[] = "++++++++++++++++++++++++++\n";
+  fout << str1;
+  const char str3[] = "=============================\n";
   for (double t = tm; t <= tmp; t += 0.01) {
+    fout << str3;
     Eigen::Vector3d pt = bspline.evaluateDeBoor(t);
+    fout << "11111111111111111111111\n";
     traj_pts.push_back(pt);
+    fout << "0000000000000000000000000000000000\n";
   }
+  const char str2[] = "--------------------\n";
+  fout<<str2;
   // displaySphereList(traj_pts, size, color, BSPLINE + id1 % 100);
   drawSpheres(traj_pts, size, color, "B-Spline", id1, 0);
 

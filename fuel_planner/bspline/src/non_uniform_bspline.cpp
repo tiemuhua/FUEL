@@ -1,5 +1,6 @@
 #include "bspline/non_uniform_bspline.h"
 #include <ros/ros.h>
+#include <fstream>
 
 namespace fast_planner {
     NonUniformBspline::NonUniformBspline(const Eigen::MatrixXd &points, const int &order,
@@ -49,24 +50,31 @@ namespace fast_planner {
     }
 
     Eigen::VectorXd NonUniformBspline::evaluateDeBoor(const double &u) {
+        string log_file_name = "/home/gjt/fuel_ws/evaluate_de_boor.log";
+        ofstream fout;
+        fout.open(log_file_name);
+        fout<<"11111111111111111\n";
         double ub = min(max(u_(p_), u), u_(m_ - p_));
 
         // Determine which [uk,uk+1] does u lay in
         int k = p_;
-        while (u_(k + 1) < ub)
+        while (k+1<u_.rows() && u_(k + 1) < ub)
             ++k;
+        fout<<"2222222222222222222\n";
 
         /* deBoor's algorithm */
         // [uk,uk+1] is controlled by q[k-p]...q[k], retrieve the associated points
         vector<Eigen::VectorXd> d;
         for (size_t i = 0; i <= p_; ++i)
             d.emplace_back(control_points_.row(k - p_ + i));
+        fout<<"333333333333333333\n";
 
         for (int r = 1; r <= p_; ++r)
             for (int i = p_; i >= r; --i) {
                 double alpha = (ub - u_[i + k - p_]) / (u_[i + 1 + k - r] - u_[i + k - p_]);
                 d[i] = (1 - alpha) * d[i - 1] + alpha * d[i];
             }
+        fout<<"444444444444444444444\n";
         return d[p_];
     }
 
