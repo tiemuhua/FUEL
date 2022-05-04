@@ -22,15 +22,14 @@ ViewNode::ViewNode(const Vector3d& p, const double& y) {
   vel_.setZero();  // vel is zero by default, should be set explicitly
 }
 
-double ViewNode::costTo(const ViewNode::Ptr& node) {
+double ViewNode::costTo(const ViewNode::Ptr& node) const {
   vector<Vector3d> path;
   double c = ViewNode::computeCost(pos_, node->pos_, yaw_, node->yaw_, vel_, yaw_dot_, path);
-  // std::cout << "cost from " << id_ << " to " << node->id_ << " is: " << c << std::endl;
   return c;
 }
 
 double ViewNode::searchPath(const Vector3d& p1, const Vector3d& p2, vector<Vector3d>& path) {
-  // Try connect two points with straight line
+  // Try to connect two points with straight line
   bool safe = true;
   Vector3i idx;
   caster_->input(p1, p2);
@@ -47,9 +46,9 @@ double ViewNode::searchPath(const Vector3d& p1, const Vector3d& p2, vector<Vecto
   }
   // Search a path using decreasing resolution
   vector<double> res = { 0.4 };
-  for (int k = 0; k < res.size(); ++k) {
+  for (double & re : res) {
     astar_->reset();
-    astar_->setResolution(res[k]);
+    astar_->setResolution(re);
     if (astar_->search(p1, p2) == Astar::REACH_END) {
       path = astar_->getPath();
       return astar_->pathLength(path);
@@ -71,10 +70,6 @@ double ViewNode::computeCost(const Vector3d& p1, const Vector3d& p2, const doubl
     Vector3d vdir = v1.normalized();
     double diff = acos(vdir.dot(dir));
     pos_cost += w_dir_ * diff;
-    // double vc = v1.dot(dir);
-    // pos_cost += w_dir_ * pow(vm_ - fabs(vc), 2) / (2 * vm_ * am_);
-    // if (vc < 0)
-    //   pos_cost += w_dir_ * 2 * fabs(vc) / am_;
   }
 
   // Cost of yaw change
@@ -82,19 +77,5 @@ double ViewNode::computeCost(const Vector3d& p1, const Vector3d& p2, const doubl
   diff = min(diff, 2 * M_PI - diff);
   double yaw_cost = diff / yd_;
   return max(pos_cost, yaw_cost);
-
-  // // Consider yaw rate change
-  // if (fabs(yd1) > 1e-3)
-  // {
-  //   double diff1 = y2 - y1;
-  //   while (diff1 < -M_PI)
-  //     diff1 += 2 * M_PI;
-  //   while (diff1 > M_PI)
-  //     diff1 -= 2 * M_PI;
-  //   double diff2 = diff1 > 0 ? diff1 - 2 * M_PI : 2 * M_PI + diff1;
-  // }
-  // else
-  // {
-  // }
 }
 }

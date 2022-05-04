@@ -392,11 +392,11 @@ namespace fast_planner {
         }
     }
 
-    void FrontierFinder::getViewpointsInfo(
+    void FrontierFinder::getNViewPoints(
             const Vector3d &cur_pos, const vector<int> &ids, const int &view_num, const double &max_decay,
-            vector<vector<Eigen::Vector3d>> &points, vector<vector<double>> &yaws) {
-        points.clear();
-        yaws.clear();
+            vector<vector<Eigen::Vector3d>> &n_points, vector<vector<double>> &n_yaws) {
+        n_points.clear();
+        n_yaws.clear();
         for (const int id: ids) {
             const Frontier &frontier = frontiers_[id];
             vector<Eigen::Vector3d> pts;
@@ -416,8 +416,8 @@ namespace fast_planner {
                     ys.push_back(view.yaw_);
                 }
             }
-            points.push_back(pts);
-            yaws.push_back(ys);
+            n_points.push_back(pts);
+            n_yaws.push_back(ys);
         }
     }
 

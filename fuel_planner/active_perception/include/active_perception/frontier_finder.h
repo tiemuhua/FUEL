@@ -61,9 +61,9 @@ namespace fast_planner {
                                   vector<Vector3d> &averages);
 
         // Get several viewpoints for a subset of frontiers
-        void getViewpointsInfo(const Vector3d &cur_pos, const vector<int> &ids, const int &view_num,
-                               const double &max_decay, vector<vector<Vector3d>> &points,
-                               vector<vector<double>> &yaws);
+        void getNViewPoints(const Vector3d &cur_pos, const vector<int> &ids, const int &view_num,
+                            const double &max_decay, vector<vector<Vector3d>> &n_points,
+                            vector<vector<double>> &n_yaws);
 
         void updateFrontierCostMatrix();
 

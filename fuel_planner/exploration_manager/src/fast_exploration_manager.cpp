@@ -131,7 +131,7 @@ namespace fast_planner {
 
                 vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
-                frontier_finder_->getViewpointsInfo(
+                frontier_finder_->getNViewPoints(
                         pos, refined_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 vector<Vector3d> refined_points;
@@ -153,7 +153,7 @@ namespace fast_planner {
                 // Find the min cost viewpoint for next frontier
                 vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
-                frontier_finder_->getViewpointsInfo(
+                frontier_finder_->getNViewPoints(
                         pos, {0}, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 double min_cost = 100000;

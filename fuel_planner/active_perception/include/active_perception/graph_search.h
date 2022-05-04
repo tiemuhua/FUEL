@@ -7,7 +7,7 @@
 #include <list>
 #include <memory>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <Eigen/Eigen>
 
@@ -30,8 +30,7 @@ public:
     node_num_ = 0;
     edge_num_ = 0;
   }
-  ~GraphSearch() {
-  }
+  ~GraphSearch() = default;
 
   void print();
   void addNode(const shared_ptr<NodeT>& node);
@@ -89,11 +88,9 @@ void GraphSearch<NodeT>::DijkstraSearch(const int& start, const int& goal,
     auto vc = open_set.top();
     open_set.pop();
     vc->closed_ = true;
-    // close_set[vc->id_] = 1;
 
     // Check if reach target
     if (vc == end_v) {
-      // std::cout << "Dijkstra reach target" << std::endl;
       shared_ptr<NodeT> vit = vc;
       while (vit != nullptr) {
         path.push_back(vit);
@@ -103,7 +100,7 @@ void GraphSearch<NodeT>::DijkstraSearch(const int& start, const int& goal,
       return;
     }
     for (auto vb : vc->neighbors_) {
-      // Check if in close set
+      // Check if in closed set
       if (vb->closed_) continue;
 
       // Add new node or updated node in open set

@@ -69,7 +69,7 @@ namespace fast_planner {
                 v->print();
         }
 
-        double costTo(const ViewNode::Ptr &node);
+        double costTo(const ViewNode::Ptr &node) const;
 
         static double computeCost(const Vector3d &p1, const Vector3d &p2, const double &y1, const double &y2,
                                   const Vector3d &v1, const double &yd1, vector<Vector3d> &path);
