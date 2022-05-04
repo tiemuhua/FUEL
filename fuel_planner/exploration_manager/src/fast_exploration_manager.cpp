@@ -121,44 +121,24 @@ namespace fast_planner {
             if (ep_->refine_local_) {
                 // Do refinement for the next few viewpoints in the global tour
                 // Idx of the first K frontier in optimal tour
-                ed_->refined_ids_.clear();
-                ed_->unrefined_points_.clear();
-                int knum = min(int(indices.size()), ep_->refined_num_);
-                for (int i = 0; i < knum; ++i) {
+                int k_num = min(int(indices.size()), ep_->refined_num_);
+                vector<int> refined_ids;
+                for (int i = 0; i < k_num; ++i) {
                     Vector3d tmp = ed_->points_[indices[i]];
-                    ed_->unrefined_points_.push_back(tmp);
-                    ed_->refined_ids_.push_back(indices[i]);
-                    if ((tmp - pos).norm() > ep_->refined_radius_ && ed_->refined_ids_.size() >= 2) break;
+                    refined_ids.push_back(indices[i]);
+                    if ((tmp - pos).norm() > ep_->refined_radius_ && refined_ids.size() >= 2) break;
                 }
 
-                // Get top N viewpoints for the next K frontiers
-                ed_->n_points_.clear();
+                vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
                 frontier_finder_->getViewpointsInfo(
-                        pos, ed_->refined_ids_, ep_->top_view_num_, ep_->max_decay_, ed_->n_points_, n_yaws);
+                        pos, refined_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
-                ed_->refined_points_.clear();
-                ed_->refined_views_.clear();
+                vector<Vector3d> refined_points;
                 vector<double> refined_yaws;
-                refineLocalTour(pos, vel, yaw, ed_->n_points_, n_yaws, ed_->refined_points_, refined_yaws);
-                next_pos = ed_->refined_points_[0];
+                refineLocalTour(pos, vel, yaw, n_points, n_yaws, refined_points, refined_yaws);
+                next_pos = refined_points[0];
                 next_yaw = refined_yaws[0];
-
-                // Get marker for view visualization
-                for (size_t i = 0; i < ed_->refined_points_.size(); ++i) {
-                    Vector3d view =
-                            ed_->refined_points_[i] + 2.0 * Vector3d(cos(refined_yaws[i]), sin(refined_yaws[i]), 0);
-                    ed_->refined_views_.push_back(view);
-                }
-                ed_->refined_views1_.clear();
-                ed_->refined_views2_.clear();
-                for (size_t i = 0; i < ed_->refined_points_.size(); ++i) {
-                    vector<Vector3d> v1, v2;
-                    frontier_finder_->perception_utils_->setPose(ed_->refined_points_[i], refined_yaws[i]);
-                    frontier_finder_->perception_utils_->getFOV(v1, v2);
-                    ed_->refined_views1_.insert(ed_->refined_views1_.end(), v1.begin(), v1.end());
-                    ed_->refined_views2_.insert(ed_->refined_views2_.end(), v2.begin(), v2.end());
-                }
             } else {
                 // Choose the next viewpoint from global tour
                 next_pos = ed_->points_[indices[0]];
@@ -168,33 +148,27 @@ namespace fast_planner {
             // Only 1 destination, no need to find global tour through TSP
             ed_->global_tour_ = {pos, ed_->points_[0]};
             ed_->refined_tour_.clear();
-            ed_->refined_views1_.clear();
-            ed_->refined_views2_.clear();
 
             if (ep_->refine_local_) {
                 // Find the min cost viewpoint for next frontier
-                ed_->refined_ids_ = {0};
-                ed_->unrefined_points_ = {ed_->points_[0]};
-                ed_->n_points_.clear();
+                vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
                 frontier_finder_->getViewpointsInfo(
-                        pos, {0}, ep_->top_view_num_, ep_->max_decay_, ed_->n_points_, n_yaws);
+                        pos, {0}, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 double min_cost = 100000;
                 size_t min_cost_id = -1;
                 vector<Vector3d> tmp_path;
-                for (size_t i = 0; i < ed_->n_points_[0].size(); ++i) {
+                for (size_t i = 0; i < n_points[0].size(); ++i) {
                     auto tmp_cost = ViewNode::computeCost(
-                            pos, ed_->n_points_[0][i], yaw[0], n_yaws[0][i], vel, yaw[1], tmp_path);
+                            pos, n_points[0][i], yaw[0], n_yaws[0][i], vel, yaw[1], tmp_path);
                     if (tmp_cost < min_cost) {
                         min_cost = tmp_cost;
                         min_cost_id = i;
                     }
                 }
-                next_pos = ed_->n_points_[0][min_cost_id];
+                next_pos = n_points[0][min_cost_id];
                 next_yaw = n_yaws[0][min_cost_id];
-                ed_->refined_points_ = {next_pos};
-                ed_->refined_views_ = {next_pos + 2.0 * Vector3d(cos(next_yaw), sin(next_yaw), 0)};
             } else {
                 next_pos = ed_->points_[0];
                 next_yaw = ed_->yaws_[0];
