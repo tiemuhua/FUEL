@@ -459,11 +459,11 @@ namespace fast_planner {
     void FrontierFinder::getFullCostMatrix(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_yaw,
                                            Eigen::MatrixXd &mat) {
         // Use Asymmetric TSP
-        int dimension = frontiers_.size();
+        Eigen::Index dimension = frontiers_.size();
         mat.resize(dimension + 1, dimension + 1);
         // Fill block for clusters
-        for (size_t i = 0; i < frontiers_.size(); ++i) {
-            for (size_t j = 0; j < frontiers_.size(); ++j) {
+        for (Eigen::Index i = 0; i < frontiers_.size(); ++i) {
+            for (Eigen::Index j = 0; j < frontiers_.size(); ++j) {
                 mat(i + 1, j + 1) = frontiers_[i].costs_[j];
             }
         }
@@ -556,7 +556,7 @@ namespace fast_planner {
         for (const Vector3d &cell: cluster) {
             if (!perception_utils_->insideFOV(cell)) continue;
 
-            // Check if frontier cell is visible (not occulded by obstacles)
+            // Check if frontier cell is visible (not occluded by obstacles)
             ray_caster_->input(cell, pos);
             bool is_visible = true;
             while (ray_caster_->nextId(idx)) {
