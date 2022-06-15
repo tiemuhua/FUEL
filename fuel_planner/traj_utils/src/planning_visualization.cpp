@@ -10,9 +10,6 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   traj_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/trajectory", 100);
   pubs_.push_back(traj_pub_);
 
-  topo_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/topo_path", 100);
-  pubs_.push_back(topo_pub_);
-
   predict_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/prediction", 100);
   pubs_.push_back(predict_pub_);
 
@@ -28,8 +25,6 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   viewpoint_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/viewpoints", 1000);
   pubs_.push_back(viewpoint_pub_);
 
-  last_topo_path1_num_ = 0;
-  last_topo_path2_num_ = 0;
   last_bspline_phase1_num_ = 0;
   last_bspline_phase2_num_ = 0;
   last_frontier_num_ = 0;
@@ -374,89 +369,6 @@ void PlanningVisualization::drawBspline(NonUniformBspline& bspline, double size,
   }
 }
 
-void PlanningVisualization::drawTopoGraph(list<GraphNode::Ptr>& graph, double point_size,
-                                          double line_width, const Eigen::Vector4d& color1,
-                                          const Eigen::Vector4d& color2, const Eigen::Vector4d& color3,
-                                          int id) {
-  // clear exsiting node and edge (drawn last time)
-  vector<Eigen::Vector3d> empty;
-  displaySphereList(empty, point_size, color1, GRAPH_NODE, 1);
-  displaySphereList(empty, point_size, color1, GRAPH_NODE + 50, 1);
-  displayLineList(empty, empty, line_width, color3, GRAPH_EDGE, 1);
-
-  /* draw graph node */
-  vector<Eigen::Vector3d> guards, connectors;
-  for (list<GraphNode::Ptr>::iterator iter = graph.begin(); iter != graph.end(); ++iter) {
-    if ((*iter)->type_ == GraphNode::Guard) {
-      guards.push_back((*iter)->pos_);
-    } else if ((*iter)->type_ == GraphNode::Connector) {
-      connectors.push_back((*iter)->pos_);
-    }
-  }
-  displaySphereList(guards, point_size, color1, GRAPH_NODE, 1);
-  displaySphereList(connectors, point_size, color2, GRAPH_NODE + 50, 1);
-
-  /* draw graph edge */
-  vector<Eigen::Vector3d> edge_pt1, edge_pt2;
-  for (list<GraphNode::Ptr>::iterator iter = graph.begin(); iter != graph.end(); ++iter) {
-    for (int k = 0; k < (*iter)->neighbors_.size(); ++k) {
-      edge_pt1.push_back((*iter)->pos_);
-      edge_pt2.push_back((*iter)->neighbors_[k]->pos_);
-    }
-  }
-  displayLineList(edge_pt1, edge_pt2, line_width, color3, GRAPH_EDGE, 1);
-}
-
-void PlanningVisualization::drawTopoPathsPhase2(vector<vector<Eigen::Vector3d>>& paths,
-                                                double line_width) {
-  // clear drawn paths
-  Eigen::Vector4d color1(1, 1, 1, 1);
-  for (size_t i = 0; i < last_topo_path1_num_; ++i) {
-    vector<Eigen::Vector3d> empty;
-    displayLineList(empty, empty, line_width, color1, SELECT_PATH + i % 100, 1);
-    displaySphereList(empty, line_width, color1, PATH + i % 100, 1);
-  }
-
-  last_topo_path1_num_ = paths.size();
-
-  // draw new paths
-  for (size_t i = 0; i < paths.size(); ++i) {
-    vector<Eigen::Vector3d> edge_pt1, edge_pt2;
-
-    for (size_t j = 0; j < paths[i].size() - 1; ++j) {
-      edge_pt1.push_back(paths[i][j]);
-      edge_pt2.push_back(paths[i][j + 1]);
-    }
-
-    displayLineList(edge_pt1, edge_pt2, line_width, getColor(double(i) / (last_topo_path1_num_)),
-                    SELECT_PATH + i % 100, 1);
-  }
-}
-
-void PlanningVisualization::drawTopoPathsPhase1(vector<vector<Eigen::Vector3d>>& paths, double size) {
-  // clear drawn paths
-  Eigen::Vector4d color1(1, 1, 1, 1);
-  for (size_t i = 0; i < last_topo_path2_num_; ++i) {
-    vector<Eigen::Vector3d> empty;
-    displayLineList(empty, empty, size, color1, FILTERED_PATH + i % 100, 1);
-  }
-
-  last_topo_path2_num_ = paths.size();
-
-  // draw new paths
-  for (size_t i = 0; i < paths.size(); ++i) {
-    vector<Eigen::Vector3d> edge_pt1, edge_pt2;
-
-    for (size_t j = 0; j < paths[i].size() - 1; ++j) {
-      edge_pt1.push_back(paths[i][j]);
-      edge_pt2.push_back(paths[i][j + 1]);
-    }
-
-    displayLineList(edge_pt1, edge_pt2, size, getColor(double(i) / (last_topo_path2_num_), 0.2),
-                    FILTERED_PATH + i % 100, 1);
-  }
-}
-
 void PlanningVisualization::drawGoal(Eigen::Vector3d goal, double resolution,
                                      const Eigen::Vector4d& color, int id) {
   vector<Eigen::Vector3d> goal_vec = { goal };
@@ -482,8 +394,7 @@ void PlanningVisualization::drawPrediction(ObjPrediction pred, double resolution
   const double range = 5.6;
 
   vector<Eigen::Vector3d> traj;
-  for (size_t i = 0; i < pred->size(); i++) {
-    PolynomialPrediction poly = pred->at(i);
+  for (auto poly : *pred) {
     if (!poly.valid()) continue;
 
     for (double t = start_time; t <= start_time + range; t += 0.8) {

@@ -21,11 +21,6 @@ double vel_gain[3] = { 3.4, 3.4, 4.0 };
 int pub_traj_id_;
 
 std::shared_ptr<LocalTrajServer> local_traj_;
-// bool                      receive_traj_ = false;
-// vector<NonUniformBspline> traj_;
-// double                    traj_duration_;
-// ros::Time                 start_time_;
-// int                       traj_id_;
 
 vector<Eigen::Vector3d> executed_cmd_;
 
@@ -104,14 +99,14 @@ void visCallback(const ros::TimerEvent& e) {
   displayTrajWithColor(executed_cmd_, 0.05, Eigen::Vector4d(0, 1, 0, 1), pub_traj_id_);
 }
 
-void bsplineCallback(bspline::BsplineConstPtr msg) {
+void bsplineCallback(const bspline::BsplineConstPtr& msg) {
   // parse pos traj
   Eigen::MatrixXd pos_pts(msg->pos_pts.size(), 3);
   Eigen::VectorXd knots(msg->knots.size());
-  for (size_t i = 0; i < msg->knots.size(); ++i) {
+  for (Eigen::Index i = 0; i < msg->knots.size(); ++i) {
     knots(i) = msg->knots[i];
   }
-  for (size_t i = 0; i < msg->pos_pts.size(); ++i) {
+  for (Eigen::Index i = 0; i < msg->pos_pts.size(); ++i) {
     pos_pts(i, 0) = msg->pos_pts[i].x;
     pos_pts(i, 1) = msg->pos_pts[i].y;
     pos_pts(i, 2) = msg->pos_pts[i].z;
@@ -121,7 +116,7 @@ void bsplineCallback(bspline::BsplineConstPtr msg) {
 
   // parse yaw traj
   Eigen::MatrixXd yaw_pts(msg->yaw_pts.size(), 1);
-  for (size_t i = 0; i < msg->yaw_pts.size(); ++i) {
+  for (Eigen::Index i = 0; i < msg->yaw_pts.size(); ++i) {
     yaw_pts(i, 0) = msg->yaw_pts[i];
   }
   NonUniformBspline yaw_traj(yaw_pts, msg->order, msg->yaw_dt);

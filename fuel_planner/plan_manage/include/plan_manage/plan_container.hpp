@@ -7,7 +7,6 @@
 
 #include <bspline/non_uniform_bspline.h>
 #include <poly_traj/polynomial_traj.h>
-#include <path_searching/topo_prm.h>
 #include <active_perception/traj_visibility.h>
 
 using std::vector;
@@ -230,16 +229,6 @@ namespace fast_planner {
         // kinodynamic path
         vector<Eigen::Vector3d> kino_path_;
 
-        // topological paths
-        list<GraphNode::Ptr> topo_graph_;
-        vector<vector<Eigen::Vector3d>> topo_paths_;
-        vector<vector<Eigen::Vector3d>> topo_filtered_paths_;
-        vector<vector<Eigen::Vector3d>> topo_select_paths_;
-
-        // multiple topological trajectories
-        vector<NonUniformBspline> topo_traj_pos1_;
-        vector<NonUniformBspline> topo_traj_pos2_;
-
         // visibility constraint
         vector<Eigen::Vector3d> block_pts_;
         Eigen::MatrixXd ctrl_pts_;
@@ -252,24 +241,6 @@ namespace fast_planner {
         vector<double> path_yaw_;
         double dt_yaw_{};
         double dt_yaw_path_{};
-
-        void clearTopoPaths() {
-            topo_traj_pos1_.clear();
-            topo_traj_pos2_.clear();
-            topo_graph_.clear();
-            topo_paths_.clear();
-            topo_filtered_paths_.clear();
-            topo_select_paths_.clear();
-        }
-
-        void addTopoPaths(list<GraphNode::Ptr> &graph, vector<vector<Eigen::Vector3d>> &paths,
-                          vector<vector<Eigen::Vector3d>> &filtered_paths,
-                          vector<vector<Eigen::Vector3d>> &selected_paths) {
-            topo_graph_ = graph;
-            topo_paths_ = paths;
-            topo_filtered_paths_ = filtered_paths;
-            topo_select_paths_ = selected_paths;
-        }
     };
     typedef shared_ptr<MidPlanData> MidPlanDataPtr;
 }  // namespace fast_planner

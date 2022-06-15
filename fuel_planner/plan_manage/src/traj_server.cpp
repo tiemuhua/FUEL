@@ -234,12 +234,6 @@ void bsplineCallback(const bspline::BsplineConstPtr &msg) {
     traj_duration_ = traj_[0].getTimeSum();
 
     receive_traj_ = true;
-
-    // Record the start time of flight
-//    if (start_time.isZero()) {
-//        ROS_WARN("start flight");
-//        start_time = ros::Time::now();
-//    }
 }
 
 void cmdCallback(const ros::TimerEvent &e) {
@@ -269,9 +263,8 @@ void cmdCallback(const ros::TimerEvent &e) {
 
         // Report info of the whole flight
         double len = calcPathLength(traj_cmd_);
-//        double flight_t = (end_time - start_time).toSec();
-        ROS_WARN_THROTTLE(2, "flight time: %lf, path length: %lf, mean vel: %lf, energy is: % lf ", t_cur,
-                          len, len / t_cur, energy);
+        ROS_WARN_THROTTLE(2, "flight time: %lf, path length: %lf, mean vel: %lf, energy is: % lf ",
+                          t_cur, len, len / t_cur, energy);
     } else {
         cout << "[Traj server]: invalid time." << endl;
     }
@@ -385,9 +378,6 @@ void test() {
     auto t1 = ros::Time::now();
     double tn = (ros::Time::now() - t1).toSec();
     while (tn < duration && ros::ok()) {
-        // Eigen::Vector3d p = bspline.evaluateDeBoorT(tn);
-        // Eigen::Vector3d v = vel.evaluateDeBoorT(tn);
-        // Eigen::Vector3d a = acc.evaluateDeBoorT(tn);
         Eigen::Vector3d p = fitted.evaluateDeBoorT(tn);
         Eigen::Vector3d v = vel.evaluateDeBoorT(tn);
         Eigen::Vector3d a = acc.evaluateDeBoorT(tn);

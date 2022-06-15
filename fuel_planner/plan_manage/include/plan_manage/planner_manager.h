@@ -6,7 +6,6 @@
 
 #include <path_searching/astar2.h>
 #include <path_searching/kinodynamic_astar.h>
-#include <path_searching/topo_prm.h>
 
 #include <plan_env/edt_environment.h>
 
@@ -36,10 +35,6 @@ namespace fast_planner {
         void planExploreTraj(const vector<Eigen::Vector3d> &tour, const Eigen::Vector3d &cur_vel,
                              const Eigen::Vector3d &cur_acc, const double &time_lb = -1);
 
-        bool planGlobalTraj(const Eigen::Vector3d &start_pos);
-
-        bool topoReplan(bool collide);
-
         void planYaw(const Eigen::Vector3d &start_yaw);
 
         void planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw, bool lookfwd,
@@ -50,6 +45,8 @@ namespace fast_planner {
         bool checkTrajCollision(double &distance);
 
         static void calcNextYaw(const double &last_yaw, double &yaw);
+
+        void updateTrajInfo();
 
         PlanParameters pp_;
         LocalTrajDataPtr local_data_;
@@ -65,47 +62,13 @@ namespace fast_planner {
         unique_ptr<KinodynamicAstar> kino_path_finder_;
         vector<BsplineOptimizer::Ptr> bspline_optimizers_;
 
-        unique_ptr<TopologyPRM> topo_prm_;
-
-
-        void updateTrajInfo();
-
-        // topology guided optimization
-
-        void findCollisionRange(vector<Eigen::Vector3d> &colli_start, vector<Eigen::Vector3d> &colli_end,
-                                vector<Eigen::Vector3d> &start_pts, vector<Eigen::Vector3d> &end_pts);
-
-        void optimizeTopoBspline(double start_t, double duration, vector<Eigen::Vector3d> guide_path,
-                                 int traj_id);
-
-        Eigen::MatrixXd paramLocalTraj(double start_t, double &dt, double &duration);
-
-        Eigen::MatrixXd reparamLocalTraj(const double &start_t, const double &duration, const double &dt);
-
-        void selectBestTraj(NonUniformBspline &traj);
-
-        void refineTraj(NonUniformBspline &best_traj);
-
     public:
         typedef shared_ptr<FastPlannerManager> Ptr;
-
-        void planYawActMap(const Eigen::Vector3d &start_yaw);
-
-        void test();
-
-        void searchFrontier(const Eigen::Vector3d &p);
 
     private:
         unique_ptr<FrontierFinder> frontier_finder_;
         unique_ptr<HeadingPlanner> heading_planner_;
         unique_ptr<VisibilityUtil> visib_util_;
-
-        // Benchmark method, local exploration
-    public:
-        bool localExplore(Eigen::Vector3d start_pt, Eigen::Vector3d start_vel, Eigen::Vector3d start_acc,
-                          Eigen::Vector3d end_pt);
-
-        // !SECTION
     };
 }  // namespace fast_planner
 

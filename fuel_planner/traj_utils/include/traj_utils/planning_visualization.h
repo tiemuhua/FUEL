@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <bspline/non_uniform_bspline.h>
 #include <iostream>
-#include <path_searching/topo_prm.h>
 #include <plan_env/obj_predictor.h>
 #include <poly_traj/polynomial_traj.h>
 #include <ros/ros.h>
@@ -25,19 +24,10 @@ private:
     POLY_TRAJ = 500
   };
 
-  enum TOPOLOGICAL_PATH_PLANNING_ID {
-    GRAPH_NODE = 1,
-    GRAPH_EDGE = 100,
-    RAW_PATH = 200,
-    FILTERED_PATH = 300,
-    SELECT_PATH = 400
-  };
-
   /* data */
   /* visib_pub is seperated from previous ones for different info */
   ros::NodeHandle node;
   ros::Publisher traj_pub_;       // 0
-  ros::Publisher topo_pub_;       // 1
   ros::Publisher predict_pub_;    // 2
   ros::Publisher visib_pub_;      // 3, visibility constraints
   ros::Publisher frontier_pub_;   // 4, frontier searching
@@ -45,18 +35,14 @@ private:
   ros::Publisher viewpoint_pub_;  // 6, viewpoint planning
   vector<ros::Publisher> pubs_;   //
 
-  int last_topo_path1_num_;
-  int last_topo_path2_num_;
-  int last_bspline_phase1_num_;
-  int last_bspline_phase2_num_;
-  int last_frontier_num_;
+  int last_bspline_phase1_num_{};
+  int last_bspline_phase2_num_{};
+  int last_frontier_num_{};
 
 public:
-  PlanningVisualization(/* args */) {
-  }
-  ~PlanningVisualization() {
-  }
-  PlanningVisualization(ros::NodeHandle& nh);
+  PlanningVisualization(/* args */) = default;
+  ~PlanningVisualization() = default;
+  explicit PlanningVisualization(ros::NodeHandle& nh);
 
   // new interface
   void fillBasicInfo(visualization_msgs::Marker& mk, const Eigen::Vector3d& scale,
@@ -98,12 +84,6 @@ public:
   // draw a set of bspline trajectories generated in different phases
   void drawBsplinesPhase1(vector<NonUniformBspline>& bsplines, double size);
   void drawBsplinesPhase2(vector<NonUniformBspline>& bsplines, double size);
-  // draw topological graph and paths
-  void drawTopoGraph(list<GraphNode::Ptr>& graph, double point_size, double line_width,
-                     const Eigen::Vector4d& color1, const Eigen::Vector4d& color2,
-                     const Eigen::Vector4d& color3, int id = 0);
-  void drawTopoPathsPhase1(vector<vector<Eigen::Vector3d>>& paths, double line_width);
-  void drawTopoPathsPhase2(vector<vector<Eigen::Vector3d>>& paths, double line_width);
 
   void drawGoal(Eigen::Vector3d goal, double resolution, const Eigen::Vector4d& color, int id = 0);
   void drawPrediction(ObjPrediction pred, double resolution, const Eigen::Vector4d& color, int id = 0);
