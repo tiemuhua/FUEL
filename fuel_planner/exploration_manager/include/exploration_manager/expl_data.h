@@ -17,8 +17,6 @@ namespace fast_planner {
         Eigen::Vector3d odom_pos_, odom_vel_;  // odometry state
         Eigen::Quaterniond odom_orient_;
         double odom_yaw_;
-
-        Eigen::Vector3d start_pt_, start_vel_, start_acc_, start_yaw_;  // start state
     };
 
     struct FSMParam {

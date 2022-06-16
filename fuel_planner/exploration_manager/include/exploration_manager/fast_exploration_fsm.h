@@ -56,8 +56,6 @@ namespace fast_planner {
         ros::Publisher replan_pub_, new_pub_, bspline_pub_;
 
         /* helper functions */
-        int callExplorationPlanner();
-
         void transitState(EXPL_STATE new_state, const string& pos_call);
 
         /* ROS functions */
@@ -73,15 +71,10 @@ namespace fast_planner {
 
         void visualize();
 
-        void clearVisMarker();
-
     public:
-        FastExplorationFSM(ros::NodeHandle &nh);
+        explicit FastExplorationFSM(ros::NodeHandle &nh);
 
-        ~FastExplorationFSM() {
-        }
-
-//        void init(ros::NodeHandle &nh);
+        ~FastExplorationFSM() = default;
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };

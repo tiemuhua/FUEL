@@ -100,31 +100,29 @@ namespace fast_planner {
             }
 
             case PLAN_TRAJ: {
+                Eigen::Vector3d start_pos, start_vel, start_acc, start_yaw;
                 if (fd_->static_state_) {
                     // Plan from static state (hover)
-                    fd_->start_pt_ = fd_->odom_pos_;
-                    fd_->start_vel_ = fd_->odom_vel_;
-                    fd_->start_acc_.setZero();
-
-                    fd_->start_yaw_(0) = fd_->odom_yaw_;
-                    fd_->start_yaw_(1) = fd_->start_yaw_(2) = 0.0;
+                    start_pos = fd_->odom_pos_;
+                    start_vel = fd_->odom_vel_;
+                    start_acc.setZero();
+                    start_yaw(0) = fd_->odom_yaw_;
+                    start_yaw(1) = start_yaw(2) = 0.0;
                 } else {
                     // Replan from non-static state, starting from 'replan_time' seconds later
                     LocalTrajDataPtr info = planner_manager_->local_data_;
                     double t_r = (ros::Time::now() - info->start_time_).toSec() + fp_->replan_time_;
-
-                    fd_->start_pt_ = info->position_traj_.evaluateDeBoorT(t_r);
-                    fd_->start_vel_ = info->velocity_traj_.evaluateDeBoorT(t_r);
-                    fd_->start_acc_ = info->acceleration_traj_.evaluateDeBoorT(t_r);
-                    fd_->start_yaw_(0) = info->yaw_traj_.evaluateDeBoorT(t_r)[0];
-                    fd_->start_yaw_(1) = info->yawdot_traj_.evaluateDeBoorT(t_r)[0];
-                    fd_->start_yaw_(2) = info->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
+                    start_pos = info->position_traj_.evaluateDeBoorT(t_r);
+                    start_vel = info->velocity_traj_.evaluateDeBoorT(t_r);
+                    start_acc = info->acceleration_traj_.evaluateDeBoorT(t_r);
+                    start_yaw(0) = info->yaw_traj_.evaluateDeBoorT(t_r)[0];
+                    start_yaw(1) = info->yawdot_traj_.evaluateDeBoorT(t_r)[0];
+                    start_yaw(2) = info->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
                 }
 
                 // Inform traj_server the replanning
                 replan_pub_.publish(std_msgs::Empty());
-                int res = expl_manager_->planExploreMotion(fd_->start_pt_, fd_->start_vel_, fd_->start_acc_,
-                                                           fd_->start_yaw_);
+                int res = expl_manager_->planExploreMotion(start_pos, start_vel, start_acc, start_yaw);
                 classic_ = false;
                 planner_manager_->local_data_->start_time_ = ros::Time::now();
 
