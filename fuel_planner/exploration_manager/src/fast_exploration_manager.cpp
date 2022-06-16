@@ -161,6 +161,9 @@ namespace fast_planner {
         double local_time = (ros::Time::now() - t1).toSec();
         ROS_WARN("Local refine time: %lf", local_time);
 
+        /********************************************************
+         * 上面都是在探索，下面开始轨迹规划
+         * ******************************************************/
         // Compute time lower bound of yaw and use in trajectory generation
         double diff = fabs(next_yaw - yaw[0]);
         double time_lb = min(diff, 2 * M_PI - diff) / ViewNode::yd_;
@@ -169,7 +172,7 @@ namespace fast_planner {
         LocalTrajDataPtr info = planner_manager_->local_data_;
         double t_r = (ros::Time::now() - info->start_time_).toSec(); //+ fp_->replan_time_;
         Eigen::Vector3d cur_pos, cur_vel, cur_acc;
-        if (info->traj_id_ != 0) {
+        if (info->traj_id_ != 0) {//探索部分计算较为耗时，需要重新计算当前位置。
             cur_pos = info->pos_traj_.evaluateDeBoorT(t_r);
             cur_vel = info->vel_traj_.evaluateDeBoorT(t_r);
             cur_acc = info->acc_traj_.evaluateDeBoorT(t_r);
