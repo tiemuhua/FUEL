@@ -193,35 +193,29 @@ namespace fast_planner {
             ROS_ERROR("No path to next viewpoint");
             return FAIL;
         }
-        ed_->path_next_goal_ = planner_manager_->astar_path_finder_->getPath();
-        shortenPath(ed_->path_next_goal_);
+        auto path_to_next_goal = planner_manager_->astar_path_finder_->getPath();
+        shortenPath(path_to_next_goal);
 
         const double radius_far = 5.0;
         const double radius_close = 1.5;
-        const double full_path_len = Astar::pathLength(ed_->path_next_goal_);
+        const double full_path_len = Astar::pathLength(path_to_next_goal);
         if (full_path_len < radius_close) {
             // Next viewpoint is very close, no need to search kinodynamic path, just use waypoints-based optimization
-            planner_manager_->planExploreTraj(ed_->path_next_goal_, vel, acc, time_lb);
-            ed_->next_goal_ = next_pos;
+            planner_manager_->planExploreTraj(path_to_next_goal, vel, acc, time_lb);
         } else if (full_path_len > radius_far) {
             // Next viewpoint is far away, select intermediate goal on geometric path (this also deal with dead end)
-            std::cout << "Far goal." << std::endl;
             double len2 = 0.0;
-            vector<Eigen::Vector3d> truncated_path = {ed_->path_next_goal_.front()};
-            for (size_t i = 1; i < ed_->path_next_goal_.size() && len2 < radius_far; ++i) {
-                auto cur_pt = ed_->path_next_goal_[i];
+            vector<Eigen::Vector3d> truncated_path = {path_to_next_goal.front()};
+            for (size_t i = 1; i < path_to_next_goal.size() && len2 < radius_far; ++i) {
+                auto cur_pt = path_to_next_goal[i];
                 len2 += (cur_pt - truncated_path.back()).norm();
                 truncated_path.push_back(cur_pt);
             }
-            ed_->next_goal_ = truncated_path.back();
             planner_manager_->planExploreTraj(truncated_path, vel, acc, time_lb);
         } else {
             // Search kino path to exactly next viewpoint and optimize
-            std::cout << "Mid goal" << std::endl;
-            ed_->next_goal_ = next_pos;
-
             if (!planner_manager_->kinodynamicReplan(
-                    pos, vel, acc, ed_->next_goal_, Vector3d(0, 0, 0), time_lb))
+                    pos, vel, acc, next_pos, Vector3d(0, 0, 0), time_lb))
                 return FAIL;
         }
 
@@ -282,7 +276,7 @@ namespace fast_planner {
         Eigen::MatrixXd cost_mat;
         frontier_finder_->updateFrontierCostMatrix();
         frontier_finder_->getFullCostMatrix(cur_pos, cur_vel, cur_yaw, cost_mat);
-        const int dimension = cost_mat.rows();
+        const Eigen::Index dimension = cost_mat.rows();
 
         double mat_time = (ros::Time::now() - t1).toSec();
         t1 = ros::Time::now();
@@ -299,9 +293,9 @@ namespace fast_planner {
         const int scale = 100;
         // Use Asymmetric TSP
 
-        for (int i = 0; i < dimension; ++i) {
-            for (int j = 0; j < dimension; ++j) {
-                int int_cost = cost_mat(i, j) * scale;
+        for (Eigen::Index i = 0; i < dimension; ++i) {
+            for (Eigen::Index j = 0; j < dimension; ++j) {
+                int int_cost = (int )cost_mat(i, j) * scale;
                 prob_file << int_cost << " ";
             }
             prob_file << "\n";

@@ -35,11 +35,7 @@ namespace fast_planner {
         vector<Vector3d> views_;
         vector<double> yaws_;
         vector<Vector3d> global_tour_;
-
         vector<Vector3d> refined_tour_;
-
-        Vector3d next_goal_;
-        vector<Vector3d> path_next_goal_;
     };
     typedef shared_ptr<ExplorationData> ExplorationDataPtr;
 
