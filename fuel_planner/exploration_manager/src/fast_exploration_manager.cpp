@@ -75,10 +75,8 @@ namespace fast_planner {
     int FastExplorationManager::planExploreMotion(
             const Vector3d &pos, const Vector3d &vel, const Vector3d &acc, const Vector3d &yaw) {
         // Search frontiers and group them into clusters
-        ros::Time t1 = ros::Time::now(), t2 = ros::Time::now();
         frontier_finder_->removeOutDatedFrontiers();
         frontier_finder_->searchAndAddFrontiers();
-        double frontier_time = (ros::Time::now() - t1).toSec();
 
         // Find viewpoints (x,y,z,yaw) for all frontier clusters and get visible ones' info
         if (frontier_finder_->frontiers_.empty()) {
@@ -89,14 +87,9 @@ namespace fast_planner {
         vector<double> mid_points_yaw;
         frontier_finder_->getTopViewpointsInfo(pos, mid_points, mid_points_yaw);
 
-        double view_time = (ros::Time::now() - t1).toSec();
-        ROS_WARN("Frontier size: %ld, frontier_time: %lf, viewpoint size: %ld, view_time: %lf",
-                 frontier_finder_->frontiers_.size(), frontier_time, mid_points.size(), view_time);
-
         // Do global and local tour planning and retrieve the next viewpoint
         Vector3d next_pos;
         double next_yaw;
-        t1 = ros::Time::now();
         if (mid_points.size() > 1) {
             // Find the global tour passing through all viewpoints
             // Create TSP and solve by LKH
@@ -158,13 +151,12 @@ namespace fast_planner {
             }
         } else
             ROS_ERROR("Empty destination.");
-        double local_time = (ros::Time::now() - t1).toSec();
-        ROS_WARN("Local refine time: %lf", local_time);
 
         /********************************************************
          * 上面都是在探索，下面开始轨迹规划
          * ******************************************************/
         // Compute time lower bound of yaw and use in trajectory generation
+        ros::Time t1=ros::Time::now();
         double diff = fabs(next_yaw - yaw[0]);
         double time_lb = min(diff, 2 * M_PI - diff) / ViewNode::yd_;
 
@@ -222,6 +214,9 @@ namespace fast_planner {
         planner_manager_->local_data_->culcDerivatives();
         planner_manager_->local_data_->start_time_ = ros::Time::now();
         planner_manager_->local_data_->traj_id_ += 1;
+
+        ros::Time t2=ros::Time::now();
+        cout << "\n\n\n\n"<<(t2-t1).toSec()<<"\n\n\n\n";
 
         t_r = (ros::Time::now() - info->start_time_).toSec();
         cout << "before plan\n"<<cur_pos.transpose()<<endl;
