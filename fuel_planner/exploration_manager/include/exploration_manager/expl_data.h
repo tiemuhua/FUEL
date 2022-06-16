@@ -19,8 +19,6 @@ namespace fast_planner {
         double odom_yaw_;
 
         Eigen::Vector3d start_pt_, start_vel_, start_acc_, start_yaw_;  // start state
-        vector<Eigen::Vector3d> start_poss;
-        bspline::Bspline newest_traj_;
     };
 
     struct FSMParam {

@@ -46,6 +46,33 @@ namespace fast_planner {
         bspline_pub_ = nh.advertise<bspline::Bspline>("/planning/bspline", 10);
     }
 
+    bspline::Bspline func(const LocalTrajDataPtr &info, const int bspline_degree) {
+        bspline::Bspline bspline;
+        bspline.order = bspline_degree;//planner_manager_->pp_.bspline_degree_;
+        bspline.start_time = info->start_time_;
+        bspline.traj_id = info->traj_id_;
+        Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
+        for (Eigen::Index i = 0; i < pos_pts.rows(); ++i) {
+            geometry_msgs::Point pt;
+            pt.x = pos_pts(i, 0);
+            pt.y = pos_pts(i, 1);
+            pt.z = pos_pts(i, 2);
+            bspline.pos_pts.push_back(pt);
+        }
+        Eigen::VectorXd knots = info->position_traj_.getKnot();
+        for (Eigen::Index i = 0; i < knots.rows(); ++i) {
+            bspline.knots.push_back(knots(i));
+        }
+        Eigen::MatrixXd yaw_pts = info->yaw_traj_.getControlPoint();
+        for (Eigen::Index i = 0; i < yaw_pts.rows(); ++i) {
+            double yaw = yaw_pts(i, 0);
+            bspline.yaw_pts.push_back(yaw);
+        }
+        bspline.yaw_dt = info->yaw_traj_.getKnotSpan();
+        return bspline;
+    }
+
+
     void FastExplorationFSM::FSMCallback(const ros::TimerEvent &e) {
         ROS_INFO_STREAM_THROTTLE(1.0, "[FSM]: state: " << fd_->state_str_[int(state_)]);
 
@@ -96,7 +123,11 @@ namespace fast_planner {
 
                 // Inform traj_server the replanning
                 replan_pub_.publish(std_msgs::Empty());
-                int res = callExplorationPlanner();
+                int res = expl_manager_->planExploreMotion(fd_->start_pt_, fd_->start_vel_, fd_->start_acc_,
+                                                           fd_->start_yaw_);
+                classic_ = false;
+                planner_manager_->local_data_->start_time_ = ros::Time::now();
+
                 if (res == SUCCEED) {
                     transitState(PUB_TRAJ, "FSM");
                 } else if (res == NO_FRONTIER) {
@@ -111,15 +142,11 @@ namespace fast_planner {
             }
 
             case PUB_TRAJ: {
-                double dt = (ros::Time::now() - fd_->newest_traj_.start_time).toSec();
-                if (dt > 0) {
-                    bspline_pub_.publish(fd_->newest_traj_);
-                    fd_->static_state_ = false;
-                    transitState(EXEC_TRAJ, "FSM");
-
-                    thread vis_thread(&FastExplorationFSM::visualize, this);
-                    vis_thread.detach();
-                }
+                bspline_pub_.publish(func(planner_manager_->local_data_, planner_manager_->pp_.bspline_degree_));
+                fd_->static_state_ = false;
+                transitState(EXEC_TRAJ, "FSM");
+                thread vis_thread(&FastExplorationFSM::visualize, this);
+                vis_thread.detach();
                 break;
             }
 
@@ -148,44 +175,6 @@ namespace fast_planner {
                 break;
             }
         }
-    }
-
-    int FastExplorationFSM::callExplorationPlanner() {
-        ros::Time time_r = ros::Time::now() + ros::Duration(fp_->replan_time_);
-
-        int res = expl_manager_->planExploreMotion(fd_->start_pt_, fd_->start_vel_, fd_->start_acc_,
-                                                   fd_->start_yaw_);
-        classic_ = false;
-
-        if (res == SUCCEED) {
-            LocalTrajDataPtr info = planner_manager_->local_data_;
-            info->start_time_ = (ros::Time::now() - time_r).toSec() > 0 ? ros::Time::now() : time_r;
-
-            bspline::Bspline bspline;
-            bspline.order = planner_manager_->pp_.bspline_degree_;
-            bspline.start_time = info->start_time_;
-            bspline.traj_id = info->traj_id_;
-            Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
-            for (Eigen::Index i = 0; i < pos_pts.rows(); ++i) {
-                geometry_msgs::Point pt;
-                pt.x = pos_pts(i, 0);
-                pt.y = pos_pts(i, 1);
-                pt.z = pos_pts(i, 2);
-                bspline.pos_pts.push_back(pt);
-            }
-            Eigen::VectorXd knots = info->position_traj_.getKnot();
-            for (Eigen::Index i = 0; i < knots.rows(); ++i) {
-                bspline.knots.push_back(knots(i));
-            }
-            Eigen::MatrixXd yaw_pts = info->yaw_traj_.getControlPoint();
-            for (Eigen::Index i = 0; i < yaw_pts.rows(); ++i) {
-                double yaw = yaw_pts(i, 0);
-                bspline.yaw_pts.push_back(yaw);
-            }
-            bspline.yaw_dt = info->yaw_traj_.getKnotSpan();
-            fd_->newest_traj_ = bspline;
-        }
-        return res;
     }
 
     void FastExplorationFSM::visualize() {
@@ -274,7 +263,7 @@ namespace fast_planner {
         fd_->have_odom_ = true;
     }
 
-    void FastExplorationFSM::transitState(EXPL_STATE new_state, const string& pos_call) {
+    void FastExplorationFSM::transitState(EXPL_STATE new_state, const string &pos_call) {
         int pre_s = int(state_);
         state_ = new_state;
         cout << "[" + pos_call + "]: from " + fd_->state_str_[pre_s] + " to " + fd_->state_str_[int(new_state)]
