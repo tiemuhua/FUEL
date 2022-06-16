@@ -256,7 +256,6 @@ namespace fast_planner {
         ctrl_pts.col(0) = A.colPivHouseholderQr().solve(bx);
         ctrl_pts.col(1) = A.colPivHouseholderQr().solve(by);
         ctrl_pts.col(2) = A.colPivHouseholderQr().solve(bz);
-        cout << "[B-spline]: parameterization ok." << endl;
     }
 
     double NonUniformBspline::getTimeSum() {

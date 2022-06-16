@@ -56,7 +56,6 @@ namespace fast_planner {
                 is_frontier_changed.push_back(false);
             }
         }
-        cout << "origin frontiers size\t" << frontiers_.size() << endl;
         vector<Frontier> not_changed_frontiers;
         for (size_t i = 0; i < frontiers_.size(); ++i) {
             if (is_frontier_changed[i]) {
@@ -70,7 +69,6 @@ namespace fast_planner {
             }
         }
         frontiers_ = move(not_changed_frontiers);
-        cout << "removed frontiers size\t" << frontiers_.size() << endl;
 
         /********************************************
          * remove changed frontiers costs and paths *
@@ -178,9 +176,6 @@ namespace fast_planner {
         for (Frontier &ft: frontiers_) {
             ft.id_ = idx++;
         }
-        std::cout << "\nnew num: " << new_num << ", new dormant: " << new_dormant_num << std::endl;
-        std::cout << "to visit: " << frontiers_.size() << ", dormant: " << dormant_frontiers_.size()
-                  << std::endl;
     }
 
     bool FrontierFinder::expandFrontier(const Eigen::Vector3i &first, Frontier &frontier) {
@@ -367,10 +362,9 @@ namespace fast_planner {
     }
 
     void FrontierFinder::getTopViewpointsInfo(const Vector3d &cur_pos, vector<Eigen::Vector3d> &points,
-                                              vector<double> &yaws, vector<Eigen::Vector3d> &averages) {
+                                              vector<double> &yaws) {
         points.clear();
         yaws.clear();
-        averages.clear();
         for (const Frontier &frontier: frontiers_) {
             bool no_view = true;
             for (const Viewpoint &view: frontier.viewpoints_) {
@@ -378,7 +372,6 @@ namespace fast_planner {
                 if ((view.pos_ - cur_pos).norm() < min_candidate_dist_) continue;
                 points.push_back(view.pos_);
                 yaws.push_back(view.yaw_);
-                averages.push_back(frontier.average_);
                 no_view = false;
                 break;
             }
@@ -387,7 +380,6 @@ namespace fast_planner {
                 const Viewpoint &view = frontier.viewpoints_.front();
                 points.push_back(view.pos_);
                 yaws.push_back(view.yaw_);
-                averages.push_back(frontier.average_);
             }
         }
     }
@@ -439,20 +431,6 @@ namespace fast_planner {
             Vector3d center = (frontier.box_max_ + frontier.box_min_) * 0.5;
             Vector3d scale = frontier.box_max_ - frontier.box_min_;
             boxes.emplace_back(center, scale);
-        }
-    }
-
-    void FrontierFinder::getPathForTour(const Vector3d &pos, const vector<int> &frontier_ids, vector<Vector3d> &path) {
-        // Compute the path from current pos to the first frontier
-        vector<Vector3d> segment;
-        ViewNode::searchPath(pos, frontiers_[frontier_ids[0]].viewpoints_.front().pos_, segment);
-        path.insert(path.end(), segment.begin(), segment.end());
-
-        // Get paths of tour passing all clusters
-        for (size_t i = 0; i < frontier_ids.size() - 1; ++i) {
-            // Move to path to next cluster
-            const vector<Vector3d> &cur_path = frontiers_[frontier_ids[i]].paths_[frontier_ids[i + 1]];
-            path.insert(path.end(), cur_path.begin(), cur_path.end());
         }
     }
 

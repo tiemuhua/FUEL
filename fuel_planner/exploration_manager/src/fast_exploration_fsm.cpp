@@ -110,7 +110,7 @@ namespace fast_planner {
                 } else {
                     // Replan from non-static state, starting from 'replan_time' seconds later
                     LocalTrajDataPtr info = planner_manager_->local_data_;
-                    double t_r = (ros::Time::now() - info->start_time_).toSec() + fp_->replan_time_;
+                    double t_r = (ros::Time::now() - info->start_time_).toSec(); //+ fp_->replan_time_;
                     start_pos = info->pos_traj_.evaluateDeBoorT(t_r);
                     start_vel = info->vel_traj_.evaluateDeBoorT(t_r);
                     start_acc = info->acc_traj_.evaluateDeBoorT(t_r);

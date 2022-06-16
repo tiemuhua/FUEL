@@ -30,12 +30,6 @@ namespace fast_planner {
         vector<vector<Vector3d>> frontiers_;
         vector<vector<Vector3d>> dead_frontiers_;
         vector<pair<Vector3d, Vector3d>> frontier_boxes_;
-        vector<Vector3d> points_;
-        vector<Vector3d> averages_;
-        vector<Vector3d> views_;
-        vector<double> yaws_;
-        vector<Vector3d> global_tour_;
-        vector<Vector3d> refined_tour_;
     };
     typedef shared_ptr<ExplorationData> ExplorationDataPtr;
 

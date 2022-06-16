@@ -75,12 +75,6 @@ namespace fast_planner {
 
     int FastExplorationManager::planExploreMotion(
             const Vector3d &pos, const Vector3d &vel, const Vector3d &acc, const Vector3d &yaw) {
-        ed_->views_.clear();
-        ed_->global_tour_.clear();
-
-        std::cout << "start pos: " << pos.transpose() << ", vel: " << vel.transpose()
-                  << ", acc: " << acc.transpose() << std::endl;
-
         // Search frontiers and group them into clusters
         ros::Time t1 = ros::Time::now(), t2 = ros::Time::now();
         frontier_finder_->removeOutDatedFrontiers();
@@ -97,42 +91,41 @@ namespace fast_planner {
             ROS_WARN("No coverable frontier.");
             return NO_FRONTIER;
         }
-        frontier_finder_->getTopViewpointsInfo(pos, ed_->points_, ed_->yaws_, ed_->averages_);
-        for (size_t i = 0; i < ed_->points_.size(); ++i)
-            ed_->views_.emplace_back(
-                    ed_->points_[i] + 2.0 * Vector3d(cos(ed_->yaws_[i]), sin(ed_->yaws_[i]), 0));
+        vector<Eigen::Vector3d> mid_points;
+        vector<double> mid_points_yaw;
+        frontier_finder_->getTopViewpointsInfo(pos, mid_points, mid_points_yaw);
 
         double view_time = (ros::Time::now() - t1).toSec();
         ROS_WARN("Frontier size: %ld, frontier_time: %lf, viewpoint size: %ld, view_time: %lf", ed_->frontiers_.size(),
                  frontier_time,
-                 ed_->points_.size(), view_time);
+                 mid_points.size(), view_time);
 
         // Do global and local tour planning and retrieve the next viewpoint
         Vector3d next_pos;
         double next_yaw;
         t1 = ros::Time::now();
-        if (ed_->points_.size() > 1) {
+        if (mid_points.size() > 1) {
             // Find the global tour passing through all viewpoints
             // Create TSP and solve by LKH
-            // Optimal tour is returned as indices of frontier
-            vector<int> indices;
-            findGlobalTour(pos, vel, yaw, indices);
+            // Optimal tour is returned as frontier_sequence of frontier
+            vector<int> frontier_sequence;
+            findGlobalTour(pos, vel, yaw, frontier_sequence);
 
             if (ep_->refine_local_) {
                 // Do refinement for the next few viewpoints in the global tour
                 // Idx of the first K frontier in optimal tour
-                int k_num = min(int(indices.size()), ep_->refined_num_);
-                vector<int> refined_ids;
+                int k_num = min(int(frontier_sequence.size()), ep_->refined_num_);
+                vector<int> first_k_frontier_ids;
                 for (int i = 0; i < k_num; ++i) {
-                    Vector3d tmp = ed_->points_[indices[i]];
-                    refined_ids.push_back(indices[i]);
-                    if ((tmp - pos).norm() > ep_->refined_radius_ && refined_ids.size() >= 2) break;
+                    Vector3d tmp = mid_points[frontier_sequence[i]];
+                    first_k_frontier_ids.push_back(frontier_sequence[i]);
+                    if ((tmp - pos).norm() > ep_->refined_radius_ && first_k_frontier_ids.size() >= 2) break;
                 }
 
                 vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
                 frontier_finder_->getNViewPoints(
-                        pos, refined_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
+                        pos, first_k_frontier_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 vector<Vector3d> refined_points;
                 vector<double> refined_yaws;
@@ -141,14 +134,11 @@ namespace fast_planner {
                 next_yaw = refined_yaws[0];
             } else {
                 // Choose the next viewpoint from global tour
-                next_pos = ed_->points_[indices[0]];
-                next_yaw = ed_->yaws_[indices[0]];
+                next_pos = mid_points[frontier_sequence[0]];
+                next_yaw = mid_points_yaw[frontier_sequence[0]];
             }
-        } else if (ed_->points_.size() == 1) {
+        } else if (mid_points.size() == 1) {
             // Only 1 destination, no need to find global tour through TSP
-            ed_->global_tour_ = {pos, ed_->points_[0]};
-            ed_->refined_tour_.clear();
-
             if (ep_->refine_local_) {
                 // Find the min cost viewpoint for next frontier
                 vector<vector<Vector3d>> n_points;
@@ -170,26 +160,34 @@ namespace fast_planner {
                 next_pos = n_points[0][min_cost_id];
                 next_yaw = n_yaws[0][min_cost_id];
             } else {
-                next_pos = ed_->points_[0];
-                next_yaw = ed_->yaws_[0];
+                next_pos = mid_points[0];
+                next_yaw = mid_points_yaw[0];
             }
         } else
             ROS_ERROR("Empty destination.");
         double local_time = (ros::Time::now() - t1).toSec();
         ROS_WARN("Local refine time: %lf", local_time);
 
-        std::cout << "Next view: " << next_pos.transpose() << ", " << next_yaw << std::endl;
-
-        // Plan trajectory (position and yaw) to the next viewpoint
-        t1 = ros::Time::now();
-
         // Compute time lower bound of yaw and use in trajectory generation
         double diff = fabs(next_yaw - yaw[0]);
         double time_lb = min(diff, 2 * M_PI - diff) / ViewNode::yd_;
 
         // Generate trajectory of x,y,z
+        LocalTrajDataPtr info = planner_manager_->local_data_;
+        double t_r = (ros::Time::now() - info->start_time_).toSec(); //+ fp_->replan_time_;
+        Eigen::Vector3d cur_pos, cur_vel, cur_acc;
+        if (info->traj_id_ != 0) {
+            cur_pos = info->pos_traj_.evaluateDeBoorT(t_r);
+            cur_vel = info->vel_traj_.evaluateDeBoorT(t_r);
+            cur_acc = info->acc_traj_.evaluateDeBoorT(t_r);
+        } else {
+            cur_pos = pos;
+            cur_vel = vel;
+            cur_acc = acc;
+        }
+
         planner_manager_->astar_path_finder_->reset();
-        if (planner_manager_->astar_path_finder_->search(pos, next_pos) != Astar::REACH_END) {
+        if (planner_manager_->astar_path_finder_->search(cur_pos, next_pos) != Astar::REACH_END) {
             ROS_ERROR("No path to next viewpoint");
             return FAIL;
         }
@@ -214,7 +212,7 @@ namespace fast_planner {
             planner_manager_->planExploreTraj(truncated_path, vel, acc, time_lb);
         } else {
             // Search kino path to exactly next viewpoint and optimize
-            if (!planner_manager_->kinodynamicReplan(pos, vel, acc, next_pos, Vector3d(0, 0, 0), time_lb))
+            if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
                 return FAIL;
         }
 
@@ -228,6 +226,10 @@ namespace fast_planner {
         planner_manager_->local_data_->culcDerivatives();
         planner_manager_->local_data_->start_time_ = ros::Time::now();
         planner_manager_->local_data_->traj_id_ += 1;
+
+        t_r = (ros::Time::now() - info->start_time_).toSec();
+        cout << "before plan\n"<<cur_pos.transpose()<<endl;
+        cout << "after plan\n"<<info->pos_traj_.evaluateDeBoorT(t_r).transpose()<<endl;
 
         return SUCCEED;
     }
@@ -319,9 +321,6 @@ namespace fast_planner {
             indices.push_back(id - 2);  // Idx of solver-2 == Idx of frontier
         }
 
-        // Get the path of optimal tour from path matrix
-        frontier_finder_->getPathForTour(cur_pos, indices, ed_->global_tour_);
-
         double tsp_time = (ros::Time::now() - t1).toSec();
         ROS_WARN("Cost mat: %lf, TSP: %lf", mat_time, tsp_time);
     }
@@ -330,7 +329,6 @@ namespace fast_planner {
             const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_yaw,
             const vector<vector<Vector3d>> &n_points, const vector<vector<double>> &n_yaws,
             vector<Vector3d> &refined_pts, vector<double> &refined_yaws) {
-
         // Create graph for viewpoints selection
         GraphSearch<ViewNode> g_search;
         vector<ViewNode::Ptr> last_group, cur_group;
@@ -343,7 +341,6 @@ namespace fast_planner {
         ViewNode::Ptr final_node;
 
         // Add viewpoints
-        std::cout << "Local tour graph: ";
         for (size_t i = 0; i < n_points.size(); ++i) {
             // Create nodes for viewpoints of one frontier
             for (size_t j = 0; j < n_points[i].size(); ++j) {
@@ -361,7 +358,6 @@ namespace fast_planner {
                 }
             }
             // Store nodes for this group for connecting edges
-            std::cout << cur_group.size() << ", ";
             last_group = cur_group;
             cur_group.clear();
         }
@@ -375,20 +371,6 @@ namespace fast_planner {
             refined_pts.push_back(path[i]->pos_);
             refined_yaws.push_back(path[i]->yaw_);
         }
-
-        // Extract optimal local tour (for visualization)
-        ed_->refined_tour_.clear();
-        ed_->refined_tour_.push_back(cur_pos);
-        ViewNode::astar_->lambda_heu_ = 1.0;
-        ViewNode::astar_->setResolution(0.2);
-        for (const Vector3d &pt: refined_pts) {
-            vector<Vector3d> astar_path;
-            if (ViewNode::searchPath(ed_->refined_tour_.back(), pt, astar_path) > 1e-3)
-                ed_->refined_tour_.insert(ed_->refined_tour_.end(), astar_path.begin(), astar_path.end());
-            else
-                ed_->refined_tour_.push_back(pt);
-        }
-        ViewNode::astar_->lambda_heu_ = 10000;
     }
 
 }  // namespace fast_planner

@@ -57,8 +57,7 @@ namespace fast_planner {
         void getFrontierBoxes(vector<pair<Vector3d, Vector3d>> &boxes);
 
         // Get viewpoint with highest coverage for each frontier
-        void getTopViewpointsInfo(const Vector3d &cur_pos, vector<Vector3d> &points, vector<double> &yaws,
-                                  vector<Vector3d> &averages);
+        void getTopViewpointsInfo(const Vector3d &cur_pos, vector<Vector3d> &points, vector<double> &yaws);
 
         // Get several viewpoints for a subset of frontiers
         void getNViewPoints(const Vector3d &cur_pos, const vector<int> &ids, const int &view_num,
@@ -69,8 +68,6 @@ namespace fast_planner {
 
         void getFullCostMatrix(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_yaw,
                                Eigen::MatrixXd &mat);
-
-        void getPathForTour(const Vector3d &pos, const vector<int> &frontier_ids, vector<Vector3d> &path);
 
         bool isFrontierCovered();
 
