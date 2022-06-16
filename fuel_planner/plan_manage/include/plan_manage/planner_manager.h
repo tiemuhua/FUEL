@@ -35,14 +35,13 @@ namespace fast_planner {
         void planExploreTraj(const vector<Eigen::Vector3d> &tour, const Eigen::Vector3d &cur_vel,
                              const Eigen::Vector3d &cur_acc, const double &time_lb = -1);
 
-        void planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw, bool lookfwd,
-                            const double &relax_time);
+        void planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw,
+                            const NonUniformBspline &pos_traj, const double duration,
+                            bool lookfwd, const double &relax_time);
 
         bool checkTrajCollision(double &distance);
 
         static void calcNextYaw(const double &last_yaw, double &yaw);
-
-        void updateTrajInfo();
 
         PlanParameters pp_;
         LocalTrajDataPtr local_data_;
@@ -54,7 +53,7 @@ namespace fast_planner {
         shared_ptr<SDFMap> sdf_map_;
 
         unique_ptr<KinodynamicAstar> kino_path_finder_;
-        vector<BsplineOptimizer::Ptr> bspline_optimizers_;
+        BsplineOptimizer::Ptr pos_traj_bspline_optimizer, yaw_traj_bspline_optimizer;
 
     public:
         typedef shared_ptr<FastPlannerManager> Ptr;

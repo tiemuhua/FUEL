@@ -30,13 +30,17 @@ namespace fast_planner {
 
     struct LocalTrajData {
         /* info of generated traj */
-
         int traj_id_{};
         double duration_{};
         ros::Time start_time_;
-        Eigen::Vector3d start_pos_;
-        NonUniformBspline position_traj_, velocity_traj_, acceleration_traj_, yaw_traj_, yawdot_traj_,
-                yawdotdot_traj_;
+        NonUniformBspline pos_traj_, vel_traj_, acc_traj_;
+        NonUniformBspline yaw_traj_, yawdot_traj_, yawdotdot_traj_;
+        void culcDerivatives() {
+            vel_traj_ = pos_traj_.getDerivative();
+            acc_traj_ = vel_traj_.getDerivative();
+            yawdot_traj_ = yaw_traj_.getDerivative();
+            yawdotdot_traj_ = yawdot_traj_.getDerivative();
+        }
     };
     typedef shared_ptr<LocalTrajData> LocalTrajDataPtr;
 }  // namespace fast_planner

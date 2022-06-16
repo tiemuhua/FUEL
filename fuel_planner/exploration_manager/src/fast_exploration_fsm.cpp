@@ -28,7 +28,7 @@ namespace fast_planner {
         planner_manager_ = expl_manager_->planner_manager_;
         state_ = EXPL_STATE::INIT;
         fd_->have_odom_ = false;
-        fd_->state_str_ = {"INIT", "WAIT_TRIGGER", "PLAN_TRAJ", "PUB_TRAJ", "EXEC_TRAJ", "FINISH"};
+        fd_->state_str_ = {"INIT", "WAIT_TRIGGER", "PLAN_TRAJ", "EXEC_TRAJ", "FINISH"};
         fd_->static_state_ = true;
         fd_->trigger_ = false;
 
@@ -51,7 +51,7 @@ namespace fast_planner {
         bspline.order = bspline_degree;//planner_manager_->pp_.bspline_degree_;
         bspline.start_time = info->start_time_;
         bspline.traj_id = info->traj_id_;
-        Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
+        Eigen::MatrixXd pos_pts = info->pos_traj_.getControlPoint();
         for (Eigen::Index i = 0; i < pos_pts.rows(); ++i) {
             geometry_msgs::Point pt;
             pt.x = pos_pts(i, 0);
@@ -59,7 +59,7 @@ namespace fast_planner {
             pt.z = pos_pts(i, 2);
             bspline.pos_pts.push_back(pt);
         }
-        Eigen::VectorXd knots = info->position_traj_.getKnot();
+        Eigen::VectorXd knots = info->pos_traj_.getKnot();
         for (Eigen::Index i = 0; i < knots.rows(); ++i) {
             bspline.knots.push_back(knots(i));
         }
@@ -71,7 +71,6 @@ namespace fast_planner {
         bspline.yaw_dt = info->yaw_traj_.getKnotSpan();
         return bspline;
     }
-
 
     void FastExplorationFSM::FSMCallback(const ros::TimerEvent &e) {
         ROS_INFO_STREAM_THROTTLE(1.0, "[FSM]: state: " << fd_->state_str_[int(state_)]);
@@ -112,9 +111,9 @@ namespace fast_planner {
                     // Replan from non-static state, starting from 'replan_time' seconds later
                     LocalTrajDataPtr info = planner_manager_->local_data_;
                     double t_r = (ros::Time::now() - info->start_time_).toSec() + fp_->replan_time_;
-                    start_pos = info->position_traj_.evaluateDeBoorT(t_r);
-                    start_vel = info->velocity_traj_.evaluateDeBoorT(t_r);
-                    start_acc = info->acceleration_traj_.evaluateDeBoorT(t_r);
+                    start_pos = info->pos_traj_.evaluateDeBoorT(t_r);
+                    start_vel = info->vel_traj_.evaluateDeBoorT(t_r);
+                    start_acc = info->acc_traj_.evaluateDeBoorT(t_r);
                     start_yaw(0) = info->yaw_traj_.evaluateDeBoorT(t_r)[0];
                     start_yaw(1) = info->yawdot_traj_.evaluateDeBoorT(t_r)[0];
                     start_yaw(2) = info->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
@@ -124,10 +123,13 @@ namespace fast_planner {
                 replan_pub_.publish(std_msgs::Empty());
                 int res = expl_manager_->planExploreMotion(start_pos, start_vel, start_acc, start_yaw);
                 classic_ = false;
-                planner_manager_->local_data_->start_time_ = ros::Time::now();
 
                 if (res == SUCCEED) {
-                    transitState(PUB_TRAJ, "FSM");
+                    bspline_pub_.publish(func(planner_manager_->local_data_, planner_manager_->pp_.bspline_degree_));
+                    fd_->static_state_ = false;
+                    transitState(EXEC_TRAJ, "FSM");
+                    thread vis_thread(&FastExplorationFSM::visualize, this);
+                    vis_thread.detach();
                 } else if (res == NO_FRONTIER) {
                     transitState(FINISH, "FSM");
                     fd_->static_state_ = true;
@@ -136,15 +138,6 @@ namespace fast_planner {
                     ROS_WARN("plan fail");
                     fd_->static_state_ = true;
                 }
-                break;
-            }
-
-            case PUB_TRAJ: {
-                bspline_pub_.publish(func(planner_manager_->local_data_, planner_manager_->pp_.bspline_degree_));
-                fd_->static_state_ = false;
-                transitState(EXEC_TRAJ, "FSM");
-                thread vis_thread(&FastExplorationFSM::visualize, this);
-                vis_thread.detach();
                 break;
             }
 
@@ -191,7 +184,7 @@ namespace fast_planner {
             visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
         }
         last_ftr_num = ed_ptr->frontiers_.size();
-        visualization_->drawBspline(info->position_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15,
+        visualization_->drawBspline(info->pos_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15,
                                     Vector4d(1, 1, 0, 1));
     }
 

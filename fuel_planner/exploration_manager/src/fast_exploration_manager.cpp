@@ -214,24 +214,20 @@ namespace fast_planner {
             planner_manager_->planExploreTraj(truncated_path, vel, acc, time_lb);
         } else {
             // Search kino path to exactly next viewpoint and optimize
-            if (!planner_manager_->kinodynamicReplan(
-                    pos, vel, acc, next_pos, Vector3d(0, 0, 0), time_lb))
+            if (!planner_manager_->kinodynamicReplan(pos, vel, acc, next_pos, Vector3d(0, 0, 0), time_lb))
                 return FAIL;
         }
 
-        if (planner_manager_->local_data_->position_traj_.getTimeSum() < time_lb - 0.1)
+        if (planner_manager_->local_data_->pos_traj_.getTimeSum() < time_lb - 0.1)
             ROS_ERROR("Lower bound not satified!");
 
-        double traj_plan_time = (ros::Time::now() - t1).toSec();
+        planner_manager_->local_data_->duration_ = planner_manager_->local_data_->pos_traj_.getTimeSum();
+        planner_manager_->planYawExplore(yaw, next_yaw, planner_manager_->local_data_->pos_traj_,
+                                         planner_manager_->local_data_->duration_, true, ep_->relax_time_);
 
-        t1 = ros::Time::now();
-        planner_manager_->planYawExplore(yaw, next_yaw, true, ep_->relax_time_);
-        double yaw_time = (ros::Time::now() - t1).toSec();
-
-        ROS_WARN("Traj: %lf, yaw: %lf", traj_plan_time, yaw_time);
-        double total = (ros::Time::now() - t2).toSec();
-        ROS_WARN("Total time: %lf", total);
-        ROS_ERROR_COND(total > 0.1, "Total time too long!!!");
+        planner_manager_->local_data_->culcDerivatives();
+        planner_manager_->local_data_->start_time_ = ros::Time::now();
+        planner_manager_->local_data_->traj_id_ += 1;
 
         return SUCCEED;
     }
@@ -295,7 +291,7 @@ namespace fast_planner {
 
         for (Eigen::Index i = 0; i < dimension; ++i) {
             for (Eigen::Index j = 0; j < dimension; ++j) {
-                int int_cost = (int )cost_mat(i, j) * scale;
+                int int_cost = (int) cost_mat(i, j) * scale;
                 prob_file << int_cost << " ";
             }
             prob_file << "\n";
@@ -354,7 +350,7 @@ namespace fast_planner {
                 ViewNode::Ptr node(new ViewNode(n_points[i][j], n_yaws[i][j]));
                 g_search.addNode(node);
                 // Connect a node to nodes in last group
-                for (const auto& nd: last_group)
+                for (const auto &nd: last_group)
                     g_search.addEdge(nd->id_, node->id_);
                 cur_group.push_back(node);
 

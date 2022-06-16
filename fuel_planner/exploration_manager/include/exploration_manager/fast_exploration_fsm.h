@@ -33,7 +33,7 @@ namespace fast_planner {
     struct FSMData;
 
     enum EXPL_STATE {
-        INIT, WAIT_TRIGGER, PLAN_TRAJ, PUB_TRAJ, EXEC_TRAJ, FINISH
+        INIT, WAIT_TRIGGER, PLAN_TRAJ, EXEC_TRAJ, FINISH
     };
 
     class FastExplorationFSM {

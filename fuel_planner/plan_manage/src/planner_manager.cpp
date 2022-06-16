@@ -58,10 +58,8 @@ namespace fast_planner {
         }
 
         if (use_optimization) {
-            bspline_optimizers_.resize(10);
-            for (size_t i = 0; i < 10; ++i) {
-                bspline_optimizers_[i] = std::make_unique<BsplineOptimizer>(nh, edt_environment_);
-            }
+            pos_traj_bspline_optimizer = std::make_unique<BsplineOptimizer>(nh, edt_environment_);
+            yaw_traj_bspline_optimizer = std::make_unique<BsplineOptimizer>(nh, edt_environment_);
         }
 
         if (use_active_perception) {
@@ -73,13 +71,13 @@ namespace fast_planner {
     bool FastPlannerManager::checkTrajCollision(double &distance) {
         double t_now = (ros::Time::now() - local_data_->start_time_).toSec();
 
-        Eigen::Vector3d cur_pt = local_data_->position_traj_.evaluateDeBoorT(t_now);
+        Eigen::Vector3d cur_pt = local_data_->pos_traj_.evaluateDeBoorT(t_now);
         double radius = 0.0;
         Eigen::Vector3d fut_pt;
         double fut_t = 0.02;
 
         while (radius < 6.0 && t_now + fut_t < local_data_->duration_) {
-            fut_pt = local_data_->position_traj_.evaluateDeBoorT(t_now + fut_t);
+            fut_pt = local_data_->pos_traj_.evaluateDeBoorT(t_now + fut_t);
             // double dist = edt_environment_->sdf_map_->getDistance(fut_pt);
             if (sdf_map_->getInflateOccupancy(fut_pt) == 1) {
                 distance = radius;
@@ -152,29 +150,18 @@ namespace fast_planner {
         if (pp_.min_time_) cost_function |= BsplineOptimizer::MINTIME;
         vector<Eigen::Vector3d> start, end;
         init_bspline.getBoundaryStates(2, 0, start, end);
-        bspline_optimizers_[0]->setBoundaryStates(start, end);
-        if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
-        bspline_optimizers_[0]->optimize(ctrl_pts, ts, cost_function, 1, 1);
-        local_data_->position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
+        pos_traj_bspline_optimizer->setBoundaryStates(start, end);
+        if (time_lb > 0) pos_traj_bspline_optimizer->setTimeLowerBound(time_lb);
+        pos_traj_bspline_optimizer->optimize(ctrl_pts, ts, cost_function, 1, 1);
+        local_data_->pos_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
 
         vector<Eigen::Vector3d> start2, end2;
-        local_data_->position_traj_.getBoundaryStates(2, 0, start2, end2);
+        local_data_->pos_traj_.getBoundaryStates(2, 0, start2, end2);
         std::cout << "State error: (" << (start2[0] - start[0]).norm() << ", "
                   << (start2[1] - start[1]).norm() << ", " << (start2[2] - start[2]).norm() << ")"
                   << std::endl;
 
-        updateTrajInfo();
         return true;
-    }
-
-    void FastPlannerManager::updateTrajInfo() {
-        local_data_->velocity_traj_ = local_data_->position_traj_.getDerivative();
-        local_data_->acceleration_traj_ = local_data_->velocity_traj_.getDerivative();
-
-        local_data_->start_pos_ = local_data_->position_traj_.evaluateDeBoorT(0.0);
-        local_data_->duration_ = local_data_->position_traj_.getTimeSum();
-
-        local_data_->traj_id_ += 1;
     }
 
     void FastPlannerManager::planExploreTraj(const vector<Eigen::Vector3d> &tour,
@@ -221,19 +208,18 @@ namespace fast_planner {
 
         vector<Vector3d> start, end;
         tmp_traj.getBoundaryStates(2, 0, start, end);
-        bspline_optimizers_[0]->setBoundaryStates(start, end);
-        if (time_lb > 0) bspline_optimizers_[0]->setTimeLowerBound(time_lb);
+        pos_traj_bspline_optimizer->setBoundaryStates(start, end);
+        if (time_lb > 0) pos_traj_bspline_optimizer->setTimeLowerBound(time_lb);
+        pos_traj_bspline_optimizer->optimize(ctrl_pts, dt, cost_func, 1, 1);
 
-        bspline_optimizers_[0]->optimize(ctrl_pts, dt, cost_func, 1, 1);
-        local_data_->position_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
-
-        updateTrajInfo();
+        local_data_->pos_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, dt);
     }
 
     void FastPlannerManager::planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw,
+                                            const NonUniformBspline &pos_traj, const double duration,
                                             bool lookfwd, const double &relax_time) {
         const int seg_num = 12;
-        double dt_yaw = local_data_->duration_ / seg_num;  // time of B-spline segment
+        double dt_yaw = duration / seg_num;  // time of B-spline segment
         Eigen::Vector3d start_yaw3d = start_yaw;
         std::cout << "dt_yaw: " << dt_yaw << ", start yaw: " << start_yaw3d.transpose()
                   << ", end: " << end_yaw << std::endl;
@@ -260,9 +246,9 @@ namespace fast_planner {
             const int relax_num = relax_time / dt_yaw;
             for (int i = 1; i < seg_num - relax_num; ++i) {
                 double tc = i * dt_yaw;
-                Eigen::Vector3d pc = local_data_->position_traj_.evaluateDeBoorT(tc);
-                double tf = min(local_data_->duration_, tc + forward_t);
-                Eigen::Vector3d pf = local_data_->position_traj_.evaluateDeBoorT(tf);
+                Eigen::Vector3d pc = pos_traj.evaluateDeBoorT(tc);
+                double tf = min(duration, tc + forward_t);
+                Eigen::Vector3d pf = pos_traj.evaluateDeBoorT(tf);
                 Eigen::Vector3d pd = pf - pc;
                 Eigen::Vector3d waypt;
                 if (pd.norm() > 1e-6) {
@@ -295,14 +281,12 @@ namespace fast_planner {
         vector<Eigen::Vector3d> start = {Eigen::Vector3d(start_yaw3d[0], 0, 0),
                                          Eigen::Vector3d(start_yaw3d[1], 0, 0), Eigen::Vector3d(start_yaw3d[2], 0, 0)};
         vector<Eigen::Vector3d> end = {Eigen::Vector3d(end_yaw3d[0], 0, 0), Eigen::Vector3d(0, 0, 0)};
-        bspline_optimizers_[1]->setBoundaryStates(start, end);
-        bspline_optimizers_[1]->setWaypoints(waypts, waypt_idx);
-        bspline_optimizers_[1]->optimize(yaw, dt_yaw, cost_func, 1, 1);
+        yaw_traj_bspline_optimizer->setBoundaryStates(start, end);
+        yaw_traj_bspline_optimizer->setWaypoints(waypts, waypt_idx);
+        yaw_traj_bspline_optimizer->optimize(yaw, dt_yaw, cost_func, 1, 1);
 
         // Update traj info
         local_data_->yaw_traj_.setUniformBspline(yaw, 3, dt_yaw);
-        local_data_->yawdot_traj_ = local_data_->yaw_traj_.getDerivative();
-        local_data_->yawdotdot_traj_ = local_data_->yawdot_traj_.getDerivative();
     }
 
     void FastPlannerManager::calcNextYaw(const double &last_yaw, double &yaw) {

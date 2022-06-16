@@ -8,11 +8,9 @@ namespace fast_planner {
         setUniformBspline(points, order, interval);
     }
 
-    NonUniformBspline::NonUniformBspline() {
-    }
+    NonUniformBspline::NonUniformBspline() = default;
 
-    NonUniformBspline::~NonUniformBspline() {
-    }
+    NonUniformBspline::~NonUniformBspline() = default;
 
     void NonUniformBspline::setUniformBspline(const Eigen::MatrixXd &points, const int &order,
                                               const double &interval) {
@@ -24,7 +22,7 @@ namespace fast_planner {
         m_ = n_ + p_ + 1;
 
         u_ = Eigen::VectorXd::Zero(m_ + 1);
-        for (size_t i = 0; i <= m_; ++i) {
+        for (Eigen::Index i = 0; i <= m_; ++i) {
             if (i <= p_)
                 u_(i) = double(-p_ + i) * knot_span_;
             else
@@ -49,36 +47,29 @@ namespace fast_planner {
         return control_points_;
     }
 
-    Eigen::VectorXd NonUniformBspline::evaluateDeBoor(const double &u) {
-        string log_file_name = "/home/gjt/fuel_ws/evaluate_de_boor.log";
-        ofstream fout;
-        fout.open(log_file_name);
-        fout<<"11111111111111111\n";
+    Eigen::VectorXd NonUniformBspline::evaluateDeBoor(const double &u) const {
         double ub = min(max(u_(p_), u), u_(m_ - p_));
 
         // Determine which [uk,uk+1] does u lay in
-        int k = p_;
-        while (k+1<u_.rows() && u_(k + 1) < ub)
+        Eigen::Index k = p_;
+        while (k + 1 < u_.rows() && u_(k + 1) < ub)
             ++k;
-        fout<<"2222222222222222222\n";
 
         /* deBoor's algorithm */
         // [uk,uk+1] is controlled by q[k-p]...q[k], retrieve the associated points
         vector<Eigen::VectorXd> d;
-        for (size_t i = 0; i <= p_; ++i)
+        for (Eigen::Index i = 0; i <= p_; ++i)
             d.emplace_back(control_points_.row(k - p_ + i));
-        fout<<"333333333333333333\n";
 
-        for (int r = 1; r <= p_; ++r)
-            for (int i = p_; i >= r; --i) {
+        for (Eigen::Index r = 1; r <= p_; ++r)
+            for (Eigen::Index i = p_; i >= r; --i) {
                 double alpha = (ub - u_[i + k - p_]) / (u_[i + 1 + k - r] - u_[i + k - p_]);
                 d[i] = (1 - alpha) * d[i - 1] + alpha * d[i];
             }
-        fout<<"444444444444444444444\n";
         return d[p_];
     }
 
-    Eigen::VectorXd NonUniformBspline::evaluateDeBoorT(const double &t) {
+    Eigen::VectorXd NonUniformBspline::evaluateDeBoorT(const double &t) const {
         return evaluateDeBoor(t + u_(p_));
     }
 
@@ -142,22 +133,22 @@ namespace fast_planner {
 
     double NonUniformBspline::checkRatio() {
         Eigen::MatrixXd P = control_points_;
-        int dimension = control_points_.cols();
+        Eigen::Index dimension = control_points_.cols();
 
         // Find max vel
         double max_vel = -1.0;
-        for (size_t i = 0; i < P.rows() - 1; ++i) {
+        for (Eigen::Index i = 0; i < P.rows() - 1; ++i) {
             Eigen::VectorXd vel = p_ * (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1));
-            for (size_t j = 0; j < dimension; ++j)
+            for (Eigen::Index j = 0; j < dimension; ++j)
                 max_vel = max(max_vel, fabs(vel(j)));
         }
         // Find max acc
         double max_acc = -1.0;
-        for (size_t i = 0; i < P.rows() - 2; ++i) {
-            Eigen::VectorXd acc = p_ * (p_ - 1) * ((P.row(i + 2) - P.row(i + 1)) / (u_(i + p_ + 2) - u_(i + 2)) -
-                                                   (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1))) /
-                                  (u_(i + p_ + 1) - u_(i + 2));
-            for (size_t j = 0; j < dimension; ++j)
+        for (Eigen::Index i = 0; i < P.rows() - 2; ++i) {
+            Eigen::VectorXd v2 = (P.row(i + 2) - P.row(i + 1)) / (u_(i + p_ + 2) - u_(i + 2));
+            Eigen::VectorXd v1 = (P.row(i + 1) - P.row(i)) / (u_(i + p_ + 1) - u_(i + 1));
+            Eigen::VectorXd acc = p_ * (p_ - 1) * (v2 - v1) / (u_(i + p_ + 1) - u_(i + 2));
+            for (Eigen::Index j = 0; j < dimension; ++j)
                 max_acc = max(max_acc, fabs(acc(j)));
         }
         double ratio = max(max_vel / limit_vel_, sqrt(fabs(max_acc) / limit_acc_));
@@ -171,15 +162,15 @@ namespace fast_planner {
         // To ensure that the boundary vel/acc remain the same, some of the knot should not be changed
         // The start derivatives are not influenced from u_(2p), end derivatives are not influenced until
         // u_(m-2p+1)=
-        int num1 = 2 * p_ - 1;
-        int num2 = (getKnot().rows() - 1) - 2 * p_ + 1;
+        Eigen::Index num1 = 2 * p_ - 1;
+        Eigen::Index num2 = (getKnot().rows() - 1) - 2 * p_ + 1;
         if (num1 >= num2) return;
 
         double delta_t = (ratio - 1.0) * (u_(num2) - u_(num1));
         double t_inc = delta_t / double(num2 - num1);
-        for (int i = num1 + 1; i <= num2; ++i)
+        for (Eigen::Index i = num1 + 1; i <= num2; ++i)
             u_(i) += double(i - num1) * t_inc;
-        for (int i = num2 + 1; i < u_.rows(); ++i)
+        for (Eigen::Index i = num2 + 1; i < u_.rows(); ++i)
             u_(i) += delta_t;
     }
 
