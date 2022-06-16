@@ -35,12 +35,8 @@ namespace fast_planner {
         void planExploreTraj(const vector<Eigen::Vector3d> &tour, const Eigen::Vector3d &cur_vel,
                              const Eigen::Vector3d &cur_acc, const double &time_lb = -1);
 
-        void planYaw(const Eigen::Vector3d &start_yaw);
-
         void planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw, bool lookfwd,
                             const double &relax_time);
-
-        void setGlobalWaypoints(vector<Eigen::Vector3d> &waypoints);
 
         bool checkTrajCollision(double &distance);
 
@@ -50,8 +46,6 @@ namespace fast_planner {
 
         PlanParameters pp_;
         LocalTrajDataPtr local_data_;
-        GlobalTrajDataPtr global_data_;
-        MidPlanDataPtr plan_data_;
         EDTEnvironment::Ptr edt_environment_;
         unique_ptr<Astar> astar_path_finder_;
 
@@ -66,8 +60,6 @@ namespace fast_planner {
         typedef shared_ptr<FastPlannerManager> Ptr;
 
     private:
-        unique_ptr<FrontierFinder> frontier_finder_;
-        unique_ptr<HeadingPlanner> heading_planner_;
         unique_ptr<VisibilityUtil> visib_util_;
     };
 }  // namespace fast_planner
