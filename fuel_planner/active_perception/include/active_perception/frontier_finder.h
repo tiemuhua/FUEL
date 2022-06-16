@@ -74,6 +74,7 @@ namespace fast_planner {
         static void wrapYaw(double &yaw);
 
         shared_ptr<PerceptionUtils> perception_utils_;
+        vector<Frontier> frontiers_, dormant_frontiers_;
 
     private:
         void splitLargeFrontiers(vector<Frontier> &frontiers);
@@ -109,7 +110,6 @@ namespace fast_planner {
 
         // Data
         vector<bool> is_in_frontier_;
-        vector<Frontier> frontiers_, dormant_frontiers_;
         size_t origin_frontiers_num_{};
 
         // Params

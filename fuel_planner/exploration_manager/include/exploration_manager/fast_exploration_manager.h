@@ -36,7 +36,6 @@ namespace fast_planner {
         int planExploreMotion(const Vector3d &pos, const Vector3d &vel, const Vector3d &acc,
                               const Vector3d &yaw);
 
-        shared_ptr<ExplorationData> ed_;
         shared_ptr<ExplorationParam> ep_;
         shared_ptr<FastPlannerManager> planner_manager_;
         shared_ptr<FrontierFinder> frontier_finder_;

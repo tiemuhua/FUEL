@@ -30,7 +30,6 @@ namespace fast_planner {
         fd_->have_odom_ = false;
         fd_->state_str_ = {"INIT", "WAIT_TRIGGER", "PLAN_TRAJ", "EXEC_TRAJ", "FINISH"};
         fd_->static_state_ = true;
-        fd_->trigger_ = false;
 
         /* Ros sub, pub and timer */
         exec_timer_ = nh.createTimer(ros::Duration(0.01), &FastExplorationFSM::FSMCallback, this);
@@ -170,20 +169,20 @@ namespace fast_planner {
 
     void FastExplorationFSM::visualize() {
         LocalTrajDataPtr info = planner_manager_->local_data_;
-        ExplorationDataPtr ed_ptr = expl_manager_->ed_;
 
+        const auto &frontiers=expl_manager_->frontier_finder_->frontiers_;
         // Draw frontier
         static size_t last_ftr_num = 0;
-        for (size_t i = 0; i < ed_ptr->frontiers_.size(); ++i) {
-            visualization_->drawCubes(ed_ptr->frontiers_[i], 0.1,
-                                      visualization_->getColor(double(i) / ed_ptr->frontiers_.size(), 0.4),
+        for (size_t i = 0; i < frontiers.size(); ++i) {
+            visualization_->drawCubes(frontiers[i].cells_, 0.1,
+                                      visualization_->getColor(double(i) / frontiers.size(), 0.4),
                                       "frontier", i, 4);
         }
         // Search new frontier within box slightly inflated from updated box
-        for (size_t i = ed_ptr->frontiers_.size(); i < last_ftr_num; ++i) {
+        for (size_t i = frontiers.size(); i < last_ftr_num; ++i) {
             visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
         }
-        last_ftr_num = ed_ptr->frontiers_.size();
+        last_ftr_num = frontiers.size();
         visualization_->drawBspline(info->pos_traj_, 0.1, Vector4d(1.0, 0.0, 0.0, 1), false, 0.15,
                                     Vector4d(1, 1, 0, 1));
     }
@@ -194,21 +193,18 @@ namespace fast_planner {
 
         if (state_ == WAIT_TRIGGER || state_ == FINISH) {
             auto ft = expl_manager_->frontier_finder_;
-            auto ed = expl_manager_->ed_;
             ft->removeOutDatedFrontiers();
             ft->searchAndAddFrontiers();
             ft->updateFrontierCostMatrix();
 
-            ft->getFrontiers(ed->frontiers_);
-            ft->getFrontierBoxes(ed->frontier_boxes_);
-
+            const auto &frontiers=expl_manager_->frontier_finder_->frontiers_;
             // Draw frontier and bounding box
-            for (size_t i = 0; i < ed->frontiers_.size(); ++i) {
-                visualization_->drawCubes(ed->frontiers_[i], 0.1,
-                                          visualization_->getColor(double(i) / ed->frontiers_.size(), 0.4),
+            for (size_t i = 0; i < frontiers.size(); ++i) {
+                visualization_->drawCubes(frontiers[i].cells_, 0.1,
+                                          visualization_->getColor(double(i) / frontiers.size(), 0.4),
                                           "frontier", i, 4);
             }
-            for (int i = ed->frontiers_.size(); i < 50; ++i) {
+            for (int i = frontiers.size(); i < 50; ++i) {
                 visualization_->drawCubes({}, 0.1, Vector4d(0, 0, 0, 1), "frontier", i, 4);
             }
         }
@@ -217,7 +213,6 @@ namespace fast_planner {
     void FastExplorationFSM::triggerCallback(const nav_msgs::PathConstPtr &msg) {
         if (msg->poses[0].pose.position.z < -0.1) return;
         if (state_ != WAIT_TRIGGER) return;
-        fd_->trigger_ = true;
         cout << "Triggered!" << endl;
         transitState(PLAN_TRAJ, "triggerCallback");
     }

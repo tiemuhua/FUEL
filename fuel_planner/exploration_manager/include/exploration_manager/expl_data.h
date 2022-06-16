@@ -11,7 +11,7 @@ using Eigen::Vector3d;
 namespace fast_planner {
     struct FSMData {
         // FSM data
-        bool trigger_, have_odom_, static_state_;
+        bool have_odom_, static_state_;
         vector<string> state_str_;
 
         Eigen::Vector3d odom_pos_, odom_vel_;  // odometry state
@@ -25,13 +25,6 @@ namespace fast_planner {
         double replan_thresh3_;
         double replan_time_;  // second
     };
-
-    struct ExplorationData {
-        vector<vector<Vector3d>> frontiers_;
-        vector<vector<Vector3d>> dead_frontiers_;
-        vector<pair<Vector3d, Vector3d>> frontier_boxes_;
-    };
-    typedef shared_ptr<ExplorationData> ExplorationDataPtr;
 
     struct ExplorationParam {
         // params

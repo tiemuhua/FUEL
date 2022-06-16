@@ -36,7 +36,6 @@ namespace fast_planner {
         sdf_map_ = edt_environment_->sdf_map_;
         frontier_finder_.reset(new FrontierFinder(edt_environment_, nh));
 
-        ed_.reset(new ExplorationData);
         ep_.reset(new ExplorationParam);
 
         nh.param("exploration/refine_local", ep_->refine_local_, true);
@@ -82,12 +81,7 @@ namespace fast_planner {
         double frontier_time = (ros::Time::now() - t1).toSec();
 
         // Find viewpoints (x,y,z,yaw) for all frontier clusters and get visible ones' info
-        t1 = ros::Time::now();
-        frontier_finder_->getFrontiers(ed_->frontiers_);
-        frontier_finder_->getFrontierBoxes(ed_->frontier_boxes_);
-        frontier_finder_->getDormantFrontiers(ed_->dead_frontiers_);
-
-        if (ed_->frontiers_.empty()) {
+        if (frontier_finder_->frontiers_.empty()) {
             ROS_WARN("No coverable frontier.");
             return NO_FRONTIER;
         }
@@ -96,9 +90,8 @@ namespace fast_planner {
         frontier_finder_->getTopViewpointsInfo(pos, mid_points, mid_points_yaw);
 
         double view_time = (ros::Time::now() - t1).toSec();
-        ROS_WARN("Frontier size: %ld, frontier_time: %lf, viewpoint size: %ld, view_time: %lf", ed_->frontiers_.size(),
-                 frontier_time,
-                 mid_points.size(), view_time);
+        ROS_WARN("Frontier size: %ld, frontier_time: %lf, viewpoint size: %ld, view_time: %lf",
+                 frontier_finder_->frontiers_.size(), frontier_time, mid_points.size(), view_time);
 
         // Do global and local tour planning and retrieve the next viewpoint
         Vector3d next_pos;

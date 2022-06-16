@@ -413,27 +413,6 @@ namespace fast_planner {
         }
     }
 
-    void FrontierFinder::getFrontiers(vector<vector<Eigen::Vector3d>> &clusters) {
-        clusters.clear();
-        for (const Frontier &frontier: frontiers_)
-            clusters.push_back(frontier.cells_);
-    }
-
-    void FrontierFinder::getDormantFrontiers(vector<vector<Vector3d>> &clusters) {
-        clusters.clear();
-        for (const Frontier &ft: dormant_frontiers_)
-            clusters.push_back(ft.cells_);
-    }
-
-    void FrontierFinder::getFrontierBoxes(vector<pair<Eigen::Vector3d, Eigen::Vector3d>> &boxes) {
-        boxes.clear();
-        for (const Frontier &frontier: frontiers_) {
-            Vector3d center = (frontier.box_max_ + frontier.box_min_) * 0.5;
-            Vector3d scale = frontier.box_max_ - frontier.box_min_;
-            boxes.emplace_back(center, scale);
-        }
-    }
-
     void FrontierFinder::getFullCostMatrix(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_yaw,
                                            Eigen::MatrixXd &mat) {
         // Use Asymmetric TSP
