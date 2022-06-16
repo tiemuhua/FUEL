@@ -45,9 +45,9 @@ namespace fast_planner {
         bspline_pub_ = nh.advertise<bspline::Bspline>("/planning/bspline", 10);
     }
 
-    bspline::Bspline func(const LocalTrajDataPtr &info, const int bspline_degree) {
+    bspline::Bspline localTraj2Bspline(const LocalTrajDataPtr &info, const int bspline_degree) {
         bspline::Bspline bspline;
-        bspline.order = bspline_degree;//planner_manager_->pp_.bspline_degree_;
+        bspline.order = bspline_degree;
         bspline.start_time = info->start_time_;
         bspline.traj_id = info->traj_id_;
         Eigen::MatrixXd pos_pts = info->pos_traj_.getControlPoint();
@@ -124,7 +124,7 @@ namespace fast_planner {
                 classic_ = false;
 
                 if (res == SUCCEED) {
-                    bspline_pub_.publish(func(planner_manager_->local_data_, planner_manager_->pp_.bspline_degree_));
+                    bspline_pub_.publish(localTraj2Bspline(planner_manager_->local_data_, planner_manager_->pp_.bspline_degree_));
                     fd_->static_state_ = false;
                     transitState(EXEC_TRAJ, "FSM");
                     thread vis_thread(&FastExplorationFSM::visualize, this);

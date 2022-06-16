@@ -75,7 +75,7 @@ namespace fast_planner {
         if (cost_function_ & VIEWCONS) cost_str += " view  |";
         if (cost_function_ & MINTIME) cost_str += " time  |";
 
-        // ROS_INFO_STREAM("cost func: " << cost_str);
+        // ROS_INFO_STREAM("cost localTraj2Bspline: " << cost_str);
     }
 
     void BsplineOptimizer::setGuidePath(const vector<Eigen::Vector3d> &guide_pt) {
