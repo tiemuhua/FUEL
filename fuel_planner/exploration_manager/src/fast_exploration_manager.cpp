@@ -72,30 +72,29 @@ namespace fast_planner {
         par_file << "RUNS = 1\n";
     }
 
-    int FastExplorationManager::planExploreMotion(
-            const Vector3d &pos, const Vector3d &vel, const Vector3d &acc, const Vector3d &yaw) {
+    int FastExplorationManager::planExplore(const Vector3d &cur_pos, const Vector3d &cur_vel,
+                                            const Vector3d &cur_acc, const Vector3d &cur_yaw,
+                                            Vector3d &next_pos, double &next_yaw) {
         // Search frontiers and group them into clusters
         frontier_finder_->removeOutDatedFrontiers();
         frontier_finder_->searchAndAddFrontiers();
 
-        // Find viewpoints (x,y,z,yaw) for all frontier clusters and get visible ones' info
+        // Find viewpoints (x,y,z,cur_yaw) for all frontier clusters and get visible ones' local_traj_data
         if (frontier_finder_->frontiers_.empty()) {
             ROS_WARN("No coverable frontier.");
             return NO_FRONTIER;
         }
         vector<Eigen::Vector3d> mid_points;
         vector<double> mid_points_yaw;
-        frontier_finder_->getTopViewpointsInfo(pos, mid_points, mid_points_yaw);
+        frontier_finder_->getTopViewpointsInfo(cur_pos, mid_points, mid_points_yaw);
 
         // Do global and local tour planning and retrieve the next viewpoint
-        Vector3d next_pos;
-        double next_yaw;
         if (mid_points.size() > 1) {
             // Find the global tour passing through all viewpoints
             // Create TSP and solve by LKH
             // Optimal tour is returned as frontier_sequence of frontier
             vector<int> frontier_sequence;
-            findGlobalTour(pos, vel, yaw, frontier_sequence);
+            findGlobalTour(cur_pos, cur_vel, cur_yaw, frontier_sequence);
 
             if (ep_->refine_local_) {
                 // Do refinement for the next few viewpoints in the global tour
@@ -105,17 +104,17 @@ namespace fast_planner {
                 for (int i = 0; i < k_num; ++i) {
                     Vector3d tmp = mid_points[frontier_sequence[i]];
                     first_k_frontier_ids.push_back(frontier_sequence[i]);
-                    if ((tmp - pos).norm() > ep_->refined_radius_ && first_k_frontier_ids.size() >= 2) break;
+                    if ((tmp - cur_pos).norm() > ep_->refined_radius_ && first_k_frontier_ids.size() >= 2) break;
                 }
 
                 vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
                 frontier_finder_->getNViewPoints(
-                        pos, first_k_frontier_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
+                        cur_pos, first_k_frontier_ids, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 vector<Vector3d> refined_points;
                 vector<double> refined_yaws;
-                refineLocalTour(pos, vel, yaw, n_points, n_yaws, refined_points, refined_yaws);
+                refineLocalTour(cur_pos, cur_vel, cur_yaw, n_points, n_yaws, refined_points, refined_yaws);
                 next_pos = refined_points[0];
                 next_yaw = refined_yaws[0];
             } else {
@@ -130,14 +129,14 @@ namespace fast_planner {
                 vector<vector<Vector3d>> n_points;
                 vector<vector<double>> n_yaws;
                 frontier_finder_->getNViewPoints(
-                        pos, {0}, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
+                        cur_pos, {0}, ep_->top_view_num_, ep_->max_decay_, n_points, n_yaws);
 
                 double min_cost = 100000;
-                size_t min_cost_id = -1;
+                int min_cost_id = -1;
                 vector<Vector3d> tmp_path;
-                for (size_t i = 0; i < n_points[0].size(); ++i) {
+                for (int i = 0; i < n_points[0].size(); ++i) {
                     auto tmp_cost = ViewNode::computeCost(
-                            pos, n_points[0][i], yaw[0], n_yaws[0][i], vel, yaw[1], tmp_path);
+                            cur_pos, n_points[0][i], cur_yaw[0], n_yaws[0][i], cur_vel, cur_yaw[1], tmp_path);
                     if (tmp_cost < min_cost) {
                         min_cost = tmp_cost;
                         min_cost_id = i;
@@ -152,27 +151,14 @@ namespace fast_planner {
         } else
             ROS_ERROR("Empty destination.");
 
-        /********************************************************
-         * 上面都是在探索，下面开始轨迹规划
-         * ******************************************************/
-        // Compute time lower bound of yaw and use in trajectory generation
-        ros::Time t1=ros::Time::now();
-        double diff = fabs(next_yaw - yaw[0]);
-        double time_lb = min(diff, 2 * M_PI - diff) / ViewNode::yd_;
+        return SUCCEED;
+    }
 
-        // Generate trajectory of x,y,z
-        LocalTrajDataPtr info = planner_manager_->local_data_;
-        double t_r = (ros::Time::now() - info->start_time_).toSec(); //+ fp_->replan_time_;
-        Eigen::Vector3d cur_pos, cur_vel, cur_acc;
-        if (info->traj_id_ != 0) {//探索部分计算较为耗时，需要重新计算当前位置。
-            cur_pos = info->pos_traj_.evaluateDeBoorT(t_r);
-            cur_vel = info->vel_traj_.evaluateDeBoorT(t_r);
-            cur_acc = info->acc_traj_.evaluateDeBoorT(t_r);
-        } else {
-            cur_pos = pos;
-            cur_vel = vel;
-            cur_acc = acc;
-        }
+    int FastExplorationManager::planMotion(
+            const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_acc, const Eigen::Vector3d &cur_yaw,
+            const Eigen::Vector3d &next_pos, const double next_yaw) {
+        double diff = fabs(next_yaw - cur_yaw[0]);
+        double time_lb = min(diff, 2 * M_PI - diff) / ViewNode::yd_;
 
         planner_manager_->astar_path_finder_->reset();
         if (planner_manager_->astar_path_finder_->search(cur_pos, next_pos) != Astar::REACH_END) {
@@ -186,9 +172,11 @@ namespace fast_planner {
         const double radius_close = 1.5;
         const double full_path_len = Astar::pathLength(path_to_next_goal);
         if (full_path_len < radius_close) {
+            cout << "\n\n\n\n\n\n\n\n111111111111111111111111\n111111111111111111111111\n\n\n\n\n\n";
             // Next viewpoint is very close, no need to search kinodynamic path, just use waypoints-based optimization
-            planner_manager_->planExploreTraj(path_to_next_goal, vel, acc, time_lb);
+            planner_manager_->planExploreTraj(path_to_next_goal, cur_vel, cur_acc, time_lb);
         } else if (full_path_len > radius_far) {
+            cout << "\n\n\n\n\n\n\n\n222222222222222222222222\n222222222222222222222222\n\n\n\n\n\n";
             // Next viewpoint is far away, select intermediate goal on geometric path (this also deal with dead end)
             double len2 = 0.0;
             vector<Eigen::Vector3d> truncated_path = {path_to_next_goal.front()};
@@ -197,9 +185,10 @@ namespace fast_planner {
                 len2 += (cur_pt - truncated_path.back()).norm();
                 truncated_path.push_back(cur_pt);
             }
-            planner_manager_->planExploreTraj(truncated_path, vel, acc, time_lb);
+            planner_manager_->planExploreTraj(truncated_path, cur_vel, cur_acc, time_lb);
         } else {
             // Search kino path to exactly next viewpoint and optimize
+            cout << "\n\n\n\n\n\n\n\n0000000000000000000000000\n0000000000000000000000000\n\n\n\n\n\n";
             if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
                 return FAIL;
         }
@@ -207,20 +196,14 @@ namespace fast_planner {
         if (planner_manager_->local_data_->pos_traj_.getTimeSum() < time_lb - 0.1)
             ROS_ERROR("Lower bound not satified!");
 
-        planner_manager_->local_data_->duration_ = planner_manager_->local_data_->pos_traj_.getTimeSum();
-        planner_manager_->planYawExplore(yaw, next_yaw, planner_manager_->local_data_->pos_traj_,
-                                         planner_manager_->local_data_->duration_, true, ep_->relax_time_);
+        LocalTrajDataPtr local_traj_data = planner_manager_->local_data_;
+        local_traj_data->duration_ = local_traj_data->pos_traj_.getTimeSum();
+        planner_manager_->planYawExplore(cur_yaw, next_yaw, local_traj_data->pos_traj_,
+                                         local_traj_data->duration_, true, ep_->relax_time_);
 
-        planner_manager_->local_data_->culcDerivatives();
-        planner_manager_->local_data_->start_time_ = ros::Time::now();
-        planner_manager_->local_data_->traj_id_ += 1;
-
-        ros::Time t2=ros::Time::now();
-        cout << "\n\n\n\n"<<(t2-t1).toSec()<<"\n\n\n\n";
-
-        t_r = (ros::Time::now() - info->start_time_).toSec();
-        cout << "before plan\n"<<cur_pos.transpose()<<endl;
-        cout << "after plan\n"<<info->pos_traj_.evaluateDeBoorT(t_r).transpose()<<endl;
+        local_traj_data->culcDerivatives();
+        local_traj_data->start_time_ = ros::Time::now();
+        local_traj_data->traj_id_ += 1;
 
         return SUCCEED;
     }

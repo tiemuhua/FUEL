@@ -98,29 +98,48 @@ namespace fast_planner {
             }
 
             case PLAN_TRAJ: {
-                Eigen::Vector3d start_pos, start_vel, start_acc, start_yaw;
+                Eigen::Vector3d cur_pos, cur_vel, cur_acc, cur_yaw;
                 if (fd_->static_state_) {
                     // Plan from static state (hover)
-                    start_pos = fd_->odom_pos_;
-                    start_vel = fd_->odom_vel_;
-                    start_acc.setZero();
-                    start_yaw(0) = fd_->odom_yaw_;
-                    start_yaw(1) = start_yaw(2) = 0.0;
+                    cur_pos = fd_->odom_pos_;
+                    cur_vel = fd_->odom_vel_;
+                    cur_acc.setZero();
+                    cur_yaw(0) = fd_->odom_yaw_;
+                    cur_yaw(1) = cur_yaw(2) = 0.0;
                 } else {
                     // Replan from non-static state, starting from 'replan_time' seconds later
-                    LocalTrajDataPtr info = planner_manager_->local_data_;
-                    double t_r = (ros::Time::now() - info->start_time_).toSec(); //+ fp_->replan_time_;
-                    start_pos = info->pos_traj_.evaluateDeBoorT(t_r);
-                    start_vel = info->vel_traj_.evaluateDeBoorT(t_r);
-                    start_acc = info->acc_traj_.evaluateDeBoorT(t_r);
-                    start_yaw(0) = info->yaw_traj_.evaluateDeBoorT(t_r)[0];
-                    start_yaw(1) = info->yawdot_traj_.evaluateDeBoorT(t_r)[0];
-                    start_yaw(2) = info->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
+                    LocalTrajDataPtr local_traj_data = planner_manager_->local_data_;
+                    double t_r = (ros::Time::now() - local_traj_data->start_time_).toSec(); //+ fp_->replan_time_;
+                    cur_pos = local_traj_data->pos_traj_.evaluateDeBoorT(t_r);
+                    cur_vel = local_traj_data->vel_traj_.evaluateDeBoorT(t_r);
+                    cur_acc = local_traj_data->acc_traj_.evaluateDeBoorT(t_r);
+                    cur_yaw(0) = local_traj_data->yaw_traj_.evaluateDeBoorT(t_r)[0];
+                    cur_yaw(1) = local_traj_data->yawdot_traj_.evaluateDeBoorT(t_r)[0];
+                    cur_yaw(2) = local_traj_data->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
                 }
 
                 // Inform traj_server the replanning
                 replan_pub_.publish(std_msgs::Empty());
-                int res = expl_manager_->planExploreMotion(start_pos, start_vel, start_acc, start_yaw);
+                Eigen::Vector3d next_pos;
+                double next_yaw;
+                int res = expl_manager_->planExplore(cur_pos, cur_vel, cur_acc, cur_yaw, next_pos, next_yaw);
+                if (res == NO_FRONTIER) {
+                    transitState(FINISH, "FSM");
+                    fd_->static_state_ = true;
+                    break;
+                }
+
+                LocalTrajDataPtr local_traj_data = planner_manager_->local_data_;
+                double t_r = (ros::Time::now() - local_traj_data->start_time_).toSec();
+                if (local_traj_data->traj_id_ != 0) {//探索部分计算较为耗时，需要重新计算当前位置。
+                    cur_pos = local_traj_data->pos_traj_.evaluateDeBoorT(t_r);
+                    cur_vel = local_traj_data->vel_traj_.evaluateDeBoorT(t_r);
+                    cur_acc = local_traj_data->acc_traj_.evaluateDeBoorT(t_r);
+                    cur_yaw(0) = local_traj_data->yaw_traj_.evaluateDeBoorT(t_r)[0];
+                    cur_yaw(1) = local_traj_data->yawdot_traj_.evaluateDeBoorT(t_r)[0];
+                    cur_yaw(2) = local_traj_data->yawdotdot_traj_.evaluateDeBoorT(t_r)[0];
+                }
+                res = expl_manager_->planMotion(cur_pos, cur_vel, cur_acc, cur_yaw, next_pos, next_yaw);
                 classic_ = false;
 
                 if (res == SUCCEED) {
@@ -129,12 +148,9 @@ namespace fast_planner {
                     transitState(EXEC_TRAJ, "FSM");
                     thread vis_thread(&FastExplorationFSM::visualize, this);
                     vis_thread.detach();
-                } else if (res == NO_FRONTIER) {
-                    transitState(FINISH, "FSM");
-                    fd_->static_state_ = true;
                 } else if (res == FAIL) {
                     // Still in PLAN_TRAJ state, keep replanning
-                    ROS_WARN("plan fail");
+                    ROS_WARN("planMotion fail");
                     fd_->static_state_ = true;
                 }
                 break;
@@ -170,7 +186,7 @@ namespace fast_planner {
     void FastExplorationFSM::visualize() {
         LocalTrajDataPtr info = planner_manager_->local_data_;
 
-        const auto &frontiers=expl_manager_->frontier_finder_->frontiers_;
+        const auto &frontiers = expl_manager_->frontier_finder_->frontiers_;
         // Draw frontier
         static size_t last_ftr_num = 0;
         for (size_t i = 0; i < frontiers.size(); ++i) {
@@ -197,7 +213,7 @@ namespace fast_planner {
             ft->searchAndAddFrontiers();
             ft->updateFrontierCostMatrix();
 
-            const auto &frontiers=expl_manager_->frontier_finder_->frontiers_;
+            const auto &frontiers = expl_manager_->frontier_finder_->frontiers_;
             // Draw frontier and bounding box
             for (size_t i = 0; i < frontiers.size(); ++i) {
                 visualization_->drawCubes(frontiers[i].cells_, 0.1,

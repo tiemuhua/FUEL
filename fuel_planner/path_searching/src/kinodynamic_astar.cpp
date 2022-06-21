@@ -497,7 +497,6 @@ namespace fast_planner {
                                       double &ts, vector<Eigen::Vector3d> &point_set,
                                       vector<Eigen::Vector3d> &start_end_derivatives) {
         /* ---------- path duration ---------- */
-
         double sum_t = 0;
         for (const PathNodePtr &node: path) {
             sum_t += node->duration;

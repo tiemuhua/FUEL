@@ -23,15 +23,13 @@ private:
   /* data */
   ObjPrediction obj_prediction_;
   ObjScale obj_scale_;
-  double resolution_inv_;
+  double resolution_inv_{};
   double distToBox(int idx, const Eigen::Vector3d& pos, const double& time);
   double minDistToAllBox(const Eigen::Vector3d& pos, const double& time);
 
 public:
-  EDTEnvironment(/* args */) {
-  }
-  ~EDTEnvironment() {
-  }
+  EDTEnvironment(/* args */) = default;
+  ~EDTEnvironment() = default;
 
   shared_ptr<SDFMap> sdf_map_;
 

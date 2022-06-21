@@ -206,10 +206,10 @@ void bsplineCallback(const bspline::BsplineConstPtr &msg) {
     // Parse the msg
     Eigen::MatrixXd pos_pts(msg->pos_pts.size(), 3);
     Eigen::VectorXd knots(msg->knots.size());
-    for (size_t i = 0; i < msg->knots.size(); ++i) {
+    for (Eigen::Index i = 0; i < msg->knots.size(); ++i) {
         knots(i) = msg->knots[i];
     }
-    for (size_t i = 0; i < msg->pos_pts.size(); ++i) {
+    for (Eigen::Index i = 0; i < msg->pos_pts.size(); ++i) {
         pos_pts(i, 0) = msg->pos_pts[i].x;
         pos_pts(i, 1) = msg->pos_pts[i].y;
         pos_pts(i, 2) = msg->pos_pts[i].z;
@@ -218,7 +218,7 @@ void bsplineCallback(const bspline::BsplineConstPtr &msg) {
     pos_traj.setKnot(knots);
 
     Eigen::MatrixXd yaw_pts(msg->yaw_pts.size(), 1);
-    for (size_t i = 0; i < msg->yaw_pts.size(); ++i)
+    for (Eigen::Index i = 0; i < msg->yaw_pts.size(); ++i)
         yaw_pts(i, 0) = msg->yaw_pts[i];
     NonUniformBspline yaw_traj(yaw_pts, 3, msg->yaw_dt);
     start_time = msg->start_time;
@@ -306,6 +306,9 @@ void cmdCallback(const ros::TimerEvent &e) {
         // Add new different commanded position
         double dt = (time_now - last_time).toSec();
         energy += jer.squaredNorm() * dt;
+    }
+    if (!traj_cmd_.empty()){
+        cout << "pos - traj_cmd_.back()).norm()\t"<<(pos - traj_cmd_.back()).norm()<<endl;
     }
     traj_cmd_.push_back(pos);
     last_time = time_now;

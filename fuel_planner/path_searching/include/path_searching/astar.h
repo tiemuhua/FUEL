@@ -108,14 +108,14 @@ private:
   double time_origin_;
 
   /* helper */
-  Eigen::Vector3i posToIndex(Eigen::Vector3d pt);
-  int timeToIndex(double time);
+  Eigen::Vector3i posToIndex(const Eigen::Vector3d& pt);
+  int timeToIndex(double time) const;
   void retrievePath(NodePtr end_node);
 
   /* heuristic function */
-  double getDiagHeu(Eigen::Vector3d x1, Eigen::Vector3d x2);
+  double getDiagHeu(Eigen::Vector3d x1, Eigen::Vector3d x2) const;
   double getManhHeu(Eigen::Vector3d x1, Eigen::Vector3d x2);
-  double getEuclHeu(Eigen::Vector3d x1, Eigen::Vector3d x2);
+  double getEuclHeu(const Eigen::Vector3d& x1, const Eigen::Vector3d& x2) const;
 
 public:
   Astar(){};
@@ -127,7 +127,7 @@ public:
   void setParam(ros::NodeHandle& nh);
   void init();
   void reset();
-  int search(Eigen::Vector3d start_pt, Eigen::Vector3d end_pt, bool dynamic = false,
+  int search(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt, bool dynamic = false,
              double time_start = -1.0);
 
   void setEnvironment(const EDTEnvironment::Ptr& env);

@@ -33,8 +33,11 @@ namespace fast_planner {
 
         ~FastExplorationManager();
 
-        int planExploreMotion(const Vector3d &pos, const Vector3d &vel, const Vector3d &acc,
-                              const Vector3d &yaw);
+        int planExplore(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_acc,
+                        const Vector3d &cur_yaw, Vector3d &next_pos, double &next_yaw);
+
+        int planMotion(const Vector3d &cur_pos, const Vector3d &cur_vel, const Vector3d &cur_acc,const Eigen::Vector3d &cur_yaw,
+                       const Eigen::Vector3d &next_pos, const double next_yaw);
 
         shared_ptr<ExplorationParam> ep_;
         shared_ptr<FastPlannerManager> planner_manager_;

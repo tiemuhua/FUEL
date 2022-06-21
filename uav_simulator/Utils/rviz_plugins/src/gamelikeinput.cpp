@@ -193,7 +193,7 @@ void GameLikeInput::sendMessage() {
   std::sort(array.data.begin(), array.data.end());
 
   quadrotor_msgs::SwarmCommand swarm;
-  swarm.plan = path;
+  swarm.planMotion = path;
   swarm.selection = array.data;
 
   pub_selection.publish(array);
