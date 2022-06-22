@@ -23,6 +23,8 @@ namespace fast_planner {
 #define NOT_EXPAND 'c'
 #define inf 1 >> 30
 
+    typedef Eigen::Matrix<double, 6, 1> Vector6d;
+
     class PathNode {
     public:
         /* -------------------- */
@@ -32,15 +34,28 @@ namespace fast_planner {
         Eigen::Vector3d input;
         double duration{};
         double time{};  // dyn
-        int time_idx{};
         shared_ptr<PathNode> parent;
-        char node_state;
 
         /* -------------------- */
         PathNode() {
             parent = nullptr;
-            node_state = NOT_EXPAND;
             input = Eigen::Vector3d::Zero();
+        }
+
+        PathNode(Eigen::Vector3i index_,
+                 Vector6d state_,
+                 double g_score_,
+                 double f_score_,
+                 Eigen::Vector3d input_,
+                 double duration_,
+                 shared_ptr<PathNode> parent_) {
+            index = std::move(index_);
+            state = std::move(state_);
+            g_score = g_score_;
+            f_score = f_score_;
+            input = std::move(input_);
+            duration = duration_;
+            parent = std::move(parent_);
         }
 
         ~PathNode() = default;
@@ -105,7 +120,6 @@ namespace fast_planner {
         double max_vel_{}, max_acc_{};
         double w_time_{}, horizon_{}, lambda_heu_{};
         int allocate_num_{}, check_num_{};
-        double tie_breaker_;
         bool optimistic_{};
 
         /* map */
@@ -143,8 +157,7 @@ namespace fast_planner {
 
         /* main API */
         int search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
-                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
-                   bool dynamic, double time_start,
+                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, double time_start,
                    bool init_search,
                    vector<PathNodePtr> &path,
                    bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);

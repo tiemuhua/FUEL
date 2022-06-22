@@ -2,7 +2,7 @@
 #include <memory>
 #include <sstream>
 #include <plan_env/sdf_map.h>
-
+#include <unordered_set>
 #include <../../plan_manage/include/plan_manage/backward.hpp>
 
 namespace backward {
@@ -26,7 +26,6 @@ namespace fast_planner {
         nh.param("search/allocate_num", allocate_num_, -1);
         nh.param("search/check_num", check_num_, -1);
         nh.param("search/optimistic", optimistic_, true);
-        tie_breaker_ = 1.0 / 10000;
 
         double vel_margin;
         nh.param("search/vel_margin", vel_margin, 0.0);
@@ -40,12 +39,20 @@ namespace fast_planner {
         cout << "kino map size: " << map_size_3d_.transpose() << endl;
     }
 
-    int KinodynamicAstar::search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v,
-                                 const Eigen::Vector3d &start_a,
-                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
-                                 const bool dynamic, const double time_start,
-                                 bool init_search,
-                                 vector<PathNodePtr> &path,
+
+    struct Vector3iHash {
+        size_t operator()(const Eigen::Vector3i &vec) const {
+            std::size_t seed = 0;
+            seed ^= vec(0) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= vec(1) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= vec(2) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            return seed;
+        }
+    };
+
+    int KinodynamicAstar::search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
+                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, const double time_start,
+                                 const bool init_search, vector<PathNodePtr> &path,
                                  bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time) {
         PathNodePtr cur_node = make_shared<PathNode>();
         cur_node->parent = nullptr;
@@ -55,61 +62,60 @@ namespace fast_planner {
         cur_node->g_score = 0.0;
 
         Eigen::VectorXd end_state(6);
-        Eigen::Vector3i end_index;
-        double time_to_goal;
-
         end_state.head(3) = end_pt;
         end_state.tail(3) = end_v;
-        end_index = posToIndex(end_pt);
+        Eigen::Vector3i end_index = posToIndex(end_pt);
+        double time_to_goal;
         cur_node->f_score = lambda_heu_ * estimateHeuristic(cur_node->state, end_state, time_to_goal);
-        cur_node->node_state = IN_OPEN_SET;
-        std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> open_set;
-        open_set.push(cur_node);
-        int use_node_num = 1;
-        NodeHashTable expanded_nodes;
+        std::unordered_set<Eigen::Vector3i, Vector3iHash> visited_ids;
+        std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> que;
+        que.push(cur_node);
 
-        if (dynamic) {
-            time_origin_ = time_start;
-            cur_node->time = time_start;
-            cur_node->time_idx = timeToIndex(time_start);
-            expanded_nodes.insert(cur_node->index, cur_node->time_idx, cur_node);
-        } else
-            expanded_nodes.insert(cur_node->index, cur_node);
+        int use_node_num = 1, iter_num = 0;
 
-        const int tolerance = ceil(1 / resolution_);
+        double res = 1 / 2.0, time_res = 1 / 1.0, time_res_init = 1 / 20.0;
+        Eigen::Matrix<double, 6, 1> cur_state = cur_node->state;
+        vector<Eigen::Vector3d> inputs;
+        vector<double> durations;
+        if (init_search) {
+            inputs.push_back(start_a);
+            for (double tau = time_res_init * init_max_tau_; tau <= init_max_tau_ + 1e-3; tau += time_res_init * init_max_tau_)
+                durations.push_back(tau);
+        } else {
+            for (double ax = -max_acc_; ax <= max_acc_ + 1e-3; ax += max_acc_ * res)
+                for (double ay = -max_acc_; ay <= max_acc_ + 1e-3; ay += max_acc_ * res)
+                    for (double az = -max_acc_; az <= max_acc_ + 1e-3; az += max_acc_ * res) {
+                        inputs.emplace_back(ax, ay, az);
+                    }
+            for (double tau = time_res * max_tau_; tau <= max_tau_; tau += time_res * max_tau_)
+                durations.push_back(tau);
+        }
 
-        int iter_num = 0;
-        while (!open_set.empty()) {
-            cur_node = open_set.top();
-            open_set.pop();
-            cur_node->node_state = IN_CLOSE_SET;
+        while (!que.empty()) {
+            cur_node = que.top();
+            que.pop();
+            Eigen::Vector3d cur_pos = cur_node->state.head(3);
+            Eigen::Vector3i cur_id = posToIndex(cur_pos);
+            if (visited_ids.count(cur_id)) {
+                continue;
+            } else {
+                visited_ids.insert(cur_id);
+            }
             iter_num += 1;
 
             // Terminate?
-            bool reach_horizon = (cur_node->state.head(3) - start_pt).norm() >= horizon_;
+            bool reach_horizon = (cur_pos - start_pt).norm() >= horizon_;
+            const int tolerance = ceil(1 / resolution_);
             bool near_end = abs(cur_node->index(0) - end_index(0)) <= tolerance &&
                             abs(cur_node->index(1) - end_index(1)) <= tolerance &&
                             abs(cur_node->index(2) - end_index(2)) <= tolerance;
             if (reach_horizon || near_end) {
                 path = move(retrievePath(cur_node));
-                if (near_end) {
-                    // Check whether shot traj exist
-                    estimateHeuristic(cur_node->state, end_state, shot_time);
-                    is_shot_succ = computeShotTraj(cur_node->state, end_state, shot_time, coef_shot);
-                    if (init_search) ROS_ERROR("Shot in first search loop!");
-                }
             }
-            if (reach_horizon) {
-                if (is_shot_succ) {
-                    std::cout << "reach end" << std::endl;
-                    return REACH_END;
-                } else {
-                    std::cout << "reach horizon" << std::endl;
-                    return REACH_HORIZON;
-                }
-            }
-
             if (near_end) {
+                // Check whether shot traj exist
+                estimateHeuristic(cur_node->state, end_state, shot_time);
+                is_shot_succ = computeShotTraj(cur_node->state, end_state, shot_time, coef_shot);
                 if (is_shot_succ) {
                     std::cout << "reach end" << std::endl;
                     return REACH_END;
@@ -121,78 +127,41 @@ namespace fast_planner {
                     return NO_PATH;
                 }
             }
-
-            double res = 1 / 2.0, time_res = 1 / 1.0, time_res_init = 1 / 20.0;
-            Eigen::Matrix<double, 6, 1> cur_state = cur_node->state;
-            Eigen::Matrix<double, 6, 1> pro_state;
-            vector<PathNodePtr> tmp_expand_nodes;
-            Eigen::Vector3d um;
-            double pro_t;
-            vector<Eigen::Vector3d> inputs;
-            vector<double> durations;
-            if (init_search) {
-                inputs.push_back(start_a);
-                for (double tau = time_res_init * init_max_tau_; tau <= init_max_tau_ + 1e-3;
-                     tau += time_res_init * init_max_tau_)
-                    durations.push_back(tau);
-                init_search = false;
-            } else {
-                for (double ax = -max_acc_; ax <= max_acc_ + 1e-3; ax += max_acc_ * res)
-                    for (double ay = -max_acc_; ay <= max_acc_ + 1e-3; ay += max_acc_ * res)
-                        for (double az = -max_acc_; az <= max_acc_ + 1e-3; az += max_acc_ * res) {
-                            um << ax, ay, az;
-                            inputs.push_back(um);
-                        }
-                for (double tau = time_res * max_tau_; tau <= max_tau_; tau += time_res * max_tau_)
-                    durations.push_back(tau);
+            if (reach_horizon) {
+                std::cout << "reach horizon" << std::endl;
+                return REACH_HORIZON;
             }
 
-            // cout << "cur state:" << cur_state.head(3).transpose() << endl;
             for (const Vector3d &input: inputs) {
                 for (double tau: durations) {
+                    Eigen::Matrix<double, 6, 1> pro_state;
                     stateTransit(cur_state, pro_state, input, tau);
-                    pro_t = cur_node->time + tau;
 
                     // Check inside map range
                     Eigen::Vector3d pro_pos = pro_state.head(3);
-                    if (!edt_environment_->sdf_map_->isInBox(pro_pos)) {
-                        if (init_search) std::cout << "box" << std::endl;
-                        continue;
-                    }
+                    if (!edt_environment_->sdf_map_->isInBox(pro_pos)) { continue; }
 
-                    // Check if in close set
+                    // Check if visited
                     Eigen::Vector3i pro_id = posToIndex(pro_pos);
-                    int pro_t_id = floor((pro_t - time_origin_) / time_resolution_); // todo
-                    PathNodePtr pro_node =
-                            dynamic ? expanded_nodes.find(pro_id, pro_t_id) : expanded_nodes.find(pro_id);
-                    if (pro_node && pro_node->node_state == IN_CLOSE_SET && init_search) {
-                        std::cout << "close" << std::endl;
-                        continue;
-                    }
+                    if (visited_ids.count(pro_id)) { continue; }
 
                     // Check maximal velocity
                     Eigen::Vector3d pro_v = pro_state.tail(3);
                     if (fabs(pro_v(0)) > max_vel_ || fabs(pro_v(1)) > max_vel_ || fabs(pro_v(2)) > max_vel_) {
-                        if (init_search) std::cout << "vel" << std::endl;
                         continue;
                     }
 
                     // Check not in the same voxel
                     Eigen::Vector3i diff = pro_id - cur_node->index;
-                    int diff_time = pro_t_id - cur_node->time_idx;
-                    if (diff.norm() == 0 && ((!dynamic) || diff_time == 0)) {
-                        if (init_search) std::cout << "same" << std::endl;
-                        continue;
-                    }
+                    if (diff.norm() == 0) { continue; }
 
                     // Check safety
-                    Eigen::Vector3d pos;
-                    Eigen::Matrix<double, 6, 1> xt;
                     bool is_occ = false;
                     for (int k = 1; k <= check_num_; ++k) {
                         double dt = tau * double(k) / double(check_num_);
+                        Eigen::Matrix<double, 6, 1> xt;
                         stateTransit(cur_state, xt, input, dt);
-                        pos = xt.head(3);
+                        Eigen::Vector3d pos = xt.head(3);
                         if (edt_environment_->sdf_map_->getInflateOccupancy(pos) == 1 ||
                             !edt_environment_->sdf_map_->isInBox(pos)) {
                             is_occ = true;
@@ -203,77 +172,18 @@ namespace fast_planner {
                             break;
                         }
                     }
-                    if (is_occ) {
-                        if (init_search) std::cout << "safe" << std::endl;
-                        continue;
-                    }
+                    if (is_occ) { continue; }
 
-                    double tmp_time_to_goal, tmp_g_score, tmp_f_score;
-                    tmp_g_score = (input.squaredNorm() + w_time_) * tau + cur_node->g_score;
-                    tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, tmp_time_to_goal);
+                    double tmp_time_to_goal;
+                    double tmp_g_score = (input.squaredNorm() + w_time_) * tau + cur_node->g_score;
+                    double tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, tmp_time_to_goal);
+                    auto pro_node = std::make_shared<PathNode>(pro_id, pro_state, tmp_g_score, tmp_f_score, input, tau, cur_node);
+                    que.push(pro_node);
 
-                    // Compare nodes expanded from the same parent
-                    bool prune = false;
-                    for (const PathNodePtr &expand_node: tmp_expand_nodes) {
-                        if ((pro_id - expand_node->index).norm() == 0 &&
-                            ((!dynamic) || pro_t_id == expand_node->time_idx)) {
-                            prune = true;
-                            if (tmp_f_score < expand_node->f_score) {
-                                expand_node->f_score = tmp_f_score;
-                                expand_node->g_score = tmp_g_score;
-                                expand_node->state = pro_state;
-                                expand_node->input = input;
-                                expand_node->duration = tau;
-                                if (dynamic) expand_node->time = cur_node->time + tau;
-                            }
-                            break;
-                        }
-                    }
-
-                    if (prune) continue;
-
-                    // This node end up in a voxel different from others
-                    if (!pro_node) {
-                        pro_node = std::make_shared<PathNode>();
-                        pro_node->index = pro_id;
-                        pro_node->state = pro_state;
-                        pro_node->f_score = tmp_f_score;
-                        pro_node->g_score = tmp_g_score;
-                        pro_node->input = input;
-                        pro_node->duration = tau;
-                        pro_node->parent = cur_node;
-                        pro_node->node_state = IN_OPEN_SET;
-                        if (dynamic) {
-                            pro_node->time = cur_node->time + tau;
-                            pro_node->time_idx = timeToIndex(pro_node->time);
-                        }
-                        open_set.push(pro_node);
-
-                        if (dynamic)
-                            expanded_nodes.insert(pro_id, pro_node->time, pro_node);
-                        else
-                            expanded_nodes.insert(pro_id, pro_node);
-
-                        tmp_expand_nodes.push_back(pro_node);
-
-                        use_node_num += 1;
-                        if (use_node_num == allocate_num_) {
-                            cout << "run out of memory." << endl;
-                            return NO_PATH;
-                        }
-                    } else if (pro_node->node_state == IN_OPEN_SET) {
-                        if (tmp_g_score < pro_node->g_score) {
-                            // pro_node->index = pro_id;
-                            pro_node->state = pro_state;
-                            pro_node->f_score = tmp_f_score;
-                            pro_node->g_score = tmp_g_score;
-                            pro_node->input = input;
-                            pro_node->duration = tau;
-                            pro_node->parent = cur_node;
-                            if (dynamic) pro_node->time = cur_node->time + tau;
-                        }
-                    } else {
-                        cout << "error type in searching: " << pro_node->node_state << endl;
+                    use_node_num++;
+                    if (use_node_num == allocate_num_) {
+                        cout << "run out of memory." << endl;
+                        return NO_PATH;
                     }
                 }
             }
@@ -314,20 +224,19 @@ namespace fast_planner {
         ts.push_back(t_bar);
 
         double cost = 100000000;
-        double t_d = t_bar;
+        optimal_time = t_bar;
 
         for (const double t: ts) {
             if (t < t_bar) continue;
             double c = -c1 / (3 * t * t * t) - c2 / (2 * t * t) - c3 / t + w_time_ * t;
             if (c < cost) {
                 cost = c;
-                t_d = t;
+                optimal_time = t;
             }
         }
 
-        optimal_time = t_d;
-
-        return 1.0 * (1 + tie_breaker_) * cost;
+        constexpr double tie_breaker = 1.0 / 10000;
+        return (1 + tie_breaker) * cost;
     }
 
     bool KinodynamicAstar::computeShotTraj(const Eigen::VectorXd &state1, const Eigen::VectorXd &state2,

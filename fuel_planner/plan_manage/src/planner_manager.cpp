@@ -117,14 +117,13 @@ namespace fast_planner {
         Eigen::MatrixXd coef_shot;
         bool is_shot_succ;
 
-        const bool dynamic = false;
         const double time_start = -1.0;
 
-        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, dynamic, time_start,
+        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, time_start,
                                                true, path, is_shot_succ, coef_shot, shot_time);
         if (status == KinodynamicAstar::NO_PATH) {
             ROS_ERROR("search 1 fail");
-            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, dynamic, time_start,
+            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, time_start,
                                                false, path, is_shot_succ, coef_shot, shot_time);
             if (status == KinodynamicAstar::NO_PATH) {
                 cout << "[Kino replan]: Can't find path." << endl;
