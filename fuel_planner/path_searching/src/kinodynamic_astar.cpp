@@ -359,43 +359,6 @@ namespace fast_planner {
         return dts;
     }
 
-    std::vector<Eigen::Vector3d> KinodynamicAstar::getKinoTraj(const vector<PathNodePtr> &path,
-                                                               const bool is_shot_succ, const Eigen::MatrixXd &coef_shot, const double t_shot) {
-        const double delta_t = 0.01;
-
-        vector<Vector3d> state_list;
-
-        /* ---------- get traj of searching ---------- */
-        for (const PathNodePtr &node: path) {
-            Vector3d input = node->input;
-            double duration = node->duration;
-            Matrix<double, 6, 1> x0 = node->state, xt;
-            for (double t = 0; t < duration; t += delta_t) {
-                stateTransit(x0, xt, input, t);
-                state_list.emplace_back(xt.head(3));
-            }
-        }
-
-        /* ---------- get traj of one shot ---------- */
-        if (is_shot_succ) {
-            Vector3d coord;
-            VectorXd poly1d, time(4);
-
-            for (double t = delta_t; t <= t_shot; t += delta_t) {
-                for (Eigen::Index j = 0; j < 4; j++)
-                    time(j) = pow(t, j);
-
-                for (int dim = 0; dim < 3; dim++) {
-                    poly1d = coef_shot.row(dim);
-                    coord(dim) = poly1d.dot(time);
-                }
-                state_list.push_back(coord);
-            }
-        }
-
-        return state_list;
-    }
-
     void KinodynamicAstar::getSamples(const vector<PathNodePtr> &path,
                                       const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
                                       const bool is_shot_succ, const Eigen::MatrixXd &coef_shot, const double t_shot,

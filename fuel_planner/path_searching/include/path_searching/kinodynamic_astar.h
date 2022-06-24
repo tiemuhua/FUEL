@@ -14,14 +14,6 @@
 #include <queue>
 
 namespace fast_planner {
-// #define REACH_HORIZON 1
-// #define REACH_END 2
-// #define NO_PATH 3
-#define IN_CLOSE_SET 'a'
-#define IN_OPEN_SET 'b'
-#define NOT_EXPAND 'c'
-#define inf 1 >> 30
-
     typedef Eigen::Matrix<double, 6, 1> Vector6d;
     typedef Eigen::Matrix<int, 6, 1> Vector6i;
 
@@ -89,8 +81,6 @@ namespace fast_planner {
         /* helper */
         Vector6i discretizeState(const Vector6d &state);
 
-        int timeToIndex(double time) const;
-
         static vector<PathNodePtr> retrievePath(PathNodePtr cur_node);
 
         /* shot trajectory */
@@ -116,22 +106,13 @@ namespace fast_planner {
 
         /* main API */
         int search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
-                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, double time_start,
-                   bool init_search,
-                   vector<PathNodePtr> &path,
-                   bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);
+                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
+                   double time_start, bool init_search,
+                   vector<PathNodePtr> &path, bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);
 
-        static std::vector<Eigen::Vector3d> getKinoTraj(const vector<PathNodePtr> &path,
-                                                        bool is_shot_succ, const Eigen::MatrixXd &coef_shot,
-                                                        double t_shot);
-
-        static void getSamples(const vector<PathNodePtr> &path,
-                               const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
-                               bool is_shot_succ,
-                               const Eigen::MatrixXd &coef_shot,
-                               double t_shot,
-                               double &ts, vector<Eigen::Vector3d> &point_set,
-                               vector<Eigen::Vector3d> &start_end_derivatives);
+        static void getSamples(const vector<PathNodePtr> &path, const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
+                               bool is_shot_succ, const Eigen::MatrixXd &coef_shot, double t_shot,
+                               double &ts, vector<Eigen::Vector3d> &point_set, vector<Eigen::Vector3d> &start_end_derivatives);
 
         typedef shared_ptr<KinodynamicAstar> Ptr;
 

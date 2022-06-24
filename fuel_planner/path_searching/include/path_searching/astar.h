@@ -20,7 +20,6 @@ namespace fast_planner {
 #define IN_CLOSE_SET 'a'
 #define IN_OPEN_SET 'b'
 #define NOT_EXPAND 'c'
-#define inf 1 >> 30
 
 class Node {
 public:
@@ -43,23 +42,23 @@ public:
 };
 typedef Node* NodePtr;
 
-class NodeComparator0 {
+class NodeComparator {
 public:
   bool operator()(NodePtr node1, NodePtr node2) {
     return node1->f_score > node2->f_score;
   }
 };
 
-class NodeHashTable0 {
+class NodeHashTable {
 private:
   /* data */
   std::unordered_map<Eigen::Vector3i, NodePtr, matrix_hash0<Eigen::Vector3i>> data_3d_;
   std::unordered_map<Eigen::Vector4i, NodePtr, matrix_hash0<Eigen::Vector4i>> data_4d_;
 
 public:
-  NodeHashTable0(/* args */) {
+  NodeHashTable(/* args */) {
   }
-  ~NodeHashTable0() {
+  ~NodeHashTable() {
   }
   void insert(Eigen::Vector3i idx, NodePtr node) {
     data_3d_.insert(make_pair(idx, node));
@@ -88,8 +87,8 @@ private:
   /* ---------- main data structure ---------- */
   vector<NodePtr> path_node_pool_;
   int use_node_num_, iter_num_;
-  NodeHashTable0 expanded_nodes_;
-  std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator0> open_set_;
+  NodeHashTable expanded_nodes_;
+  std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator> open_set_;
   std::vector<NodePtr> path_nodes_;
 
   /* ---------- record data ---------- */
