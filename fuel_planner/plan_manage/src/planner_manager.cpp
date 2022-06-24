@@ -160,6 +160,10 @@ namespace fast_planner {
                   << (start2[1] - start[1]).norm() << ", " << (start2[2] - start[2]).norm() << ")"
                   << std::endl;
 
+        cout << "start\t"<<start_pt.transpose()<<endl;
+        cout << "astar\t"<<path[0]->state.head(3).transpose()<<endl;
+        cout << "final\t"<<local_data_->pos_traj_.evaluateDeBoorT(0).transpose()<<endl;
+
         return true;
     }
 

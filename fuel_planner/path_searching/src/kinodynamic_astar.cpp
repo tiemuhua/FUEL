@@ -172,7 +172,6 @@ namespace fast_planner {
                         }
                     }
                     if (is_occ) { continue; }
-                    cout << "pro state push\t" << pro_state.transpose() << endl;
 
                     double tmp_time_to_goal;
                     double tmp_g_score = (input.squaredNorm() + w_time_) * tau + cur_node->g_score;

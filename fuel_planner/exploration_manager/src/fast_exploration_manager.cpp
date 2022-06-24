@@ -172,11 +172,9 @@ namespace fast_planner {
         const double radius_close = 1.5;
         const double full_path_len = Astar::pathLength(path_to_next_goal);
         if (full_path_len < radius_close) {
-            cout << "\n\n\n\n\n\n\n\n111111111111111111111111\n111111111111111111111111\n\n\n\n\n\n";
             // Next viewpoint is very close, no need to search kinodynamic path, just use waypoints-based optimization
             planner_manager_->planExploreTraj(path_to_next_goal, cur_vel, cur_acc, time_lb);
         } else if (full_path_len > radius_far) {
-            cout << "\n\n\n\n\n\n\n\n222222222222222222222222\n222222222222222222222222\n\n\n\n\n\n";
             // Next viewpoint is far away, select intermediate goal on geometric path (this also deal with dead end)
             double len2 = 0.0;
             vector<Eigen::Vector3d> truncated_path = {path_to_next_goal.front()};
