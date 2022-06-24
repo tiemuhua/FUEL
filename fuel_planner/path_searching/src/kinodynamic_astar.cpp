@@ -14,6 +14,18 @@ using namespace std;
 using namespace Eigen;
 
 namespace fast_planner {
+    Vector6d stateTransit(const Vector6d &state0, const Eigen::Vector3d &um, const double tau) {
+        Eigen::Matrix<double, 6, 6> phi = Eigen::MatrixXd::Identity(6, 6);  // state transit matrix
+        for (Eigen::Index i = 0; i < 3; ++i)
+            phi(i, i + 3) = tau;
+
+        Vector6d integral;
+        integral.head(3) = 0.5 * pow(tau, 2) * um;
+        integral.tail(3) = tau * um;
+
+        return phi * state0 + integral;
+    }
+
     KinodynamicAstar::KinodynamicAstar(ros::NodeHandle &nh, const EDTEnvironment::Ptr &env) {
         nh.param("search/max_tau", max_tau_, -1.0);
         nh.param("search/init_max_tau", init_max_tau_, -1.0);
@@ -48,7 +60,7 @@ namespace fast_planner {
     };
 
     int KinodynamicAstar::search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
-                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, const double time_start,
+                                 const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
                                  const bool init_search, vector<PathNodePtr> &path,
                                  bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time) {
         PathNodePtr cur_node = make_shared<PathNode>();
@@ -130,8 +142,7 @@ namespace fast_planner {
 
             for (const Vector3d &input: inputs) {
                 for (double tau: durations) {
-                    Eigen::Matrix<double, 6, 1> pro_state;
-                    stateTransit(cur_state, pro_state, input, tau);
+                    Vector6d pro_state = stateTransit(cur_state, input, tau);
 
                     // Check inside map range
                     Eigen::Vector3d pro_pos = pro_state.head(3);
@@ -155,8 +166,7 @@ namespace fast_planner {
                     bool is_occ = false;
                     for (int k = 1; k <= check_num_; ++k) {
                         double dt = tau * double(k) / double(check_num_);
-                        Eigen::Matrix<double, 6, 1> xt;
-                        stateTransit(cur_state, xt, input, dt);
+                        Vector6d xt = stateTransit(cur_state, input, dt);
                         Eigen::Vector3d pos = xt.head(3);
                         if (edt_environment_->sdf_map_->getInflateOccupancy(pos) == 1 ||
                             !edt_environment_->sdf_map_->isInBox(pos)) {
@@ -198,6 +208,9 @@ namespace fast_planner {
             cur_node = cur_node->parent;
         }
         reverse(path.begin(), path.end());
+        for (int i = 0; i < (int) path.size() - 1; ++i) { // 这一步是必要的，不然在采样函数getSamples()中会出错。
+            path[i]->duration = path[i + 1]->duration;
+        }
         return path;
     }
 
@@ -379,11 +392,11 @@ namespace fast_planner {
         double t_from_pre_node = 0;
 
         for (const PathNodePtr &node: path) {
-            Eigen::Matrix<double, 6, 1> x0 = node->state, xt;
-            Vector3d input = node->input;
+            cout << node->state.head(3).transpose() << endl;
             while (t_from_pre_node < node->duration) {
-                stateTransit(x0, xt, input, t_from_pre_node);
+                Vector6d xt = stateTransit(node->state, node->input, t_from_pre_node);
                 point_set.emplace_back(xt.head(3));
+                cout << "xt.head(3).transpose\t" << xt.head(3).transpose() << endl;
                 t_from_pre_node += ts;
             }
             t_from_pre_node -= node->duration;
@@ -422,14 +435,10 @@ namespace fast_planner {
 
         // calculate start acc
         Eigen::Vector3d start_acc;
-        if (path.empty()) {
-            // no searched traj, calculate by shot traj
+        if (path.empty()) { // no searched traj, calculate by shot traj
             start_acc = 2 * coef_shot.col(2);
-            cout << "path nodes empty\n";
-        } else {
-            // input of searched traj
+        } else { // input of searched traj
             start_acc = path.front()->input;
-            cout << "path nodes not empty\n";
         }
 
         start_end_derivatives.push_back(start_v);
@@ -441,27 +450,10 @@ namespace fast_planner {
     Vector6i KinodynamicAstar::discretizeState(const Vector6d &state) {
         Vector3i idx = ((state.head(3) - origin_) / resolution_).array().floor().cast<int>();
         Vector6i discretized_state;
-        discretized_state.head(3)=idx;
-        discretized_state.tail(3)=(state.tail(3)/resolution_).array().floor().cast<int>();
+        discretized_state.head(3) = idx;
+        discretized_state.tail(3) = (state.tail(3) / resolution_).array().floor().cast<int>();
         return discretized_state;
     }
 
-    int KinodynamicAstar::timeToIndex(double time) const {
-        return floor((time - time_origin_) / time_resolution_);
-    }
-
-    void KinodynamicAstar::stateTransit(Eigen::Matrix<double, 6, 1> &state0,
-                                        Eigen::Matrix<double, 6, 1> &state1, const Eigen::Vector3d &um,
-                                        double tau) {
-        Eigen::Matrix<double, 6, 6> phi = Eigen::MatrixXd::Identity(6, 6);  // state transit matrix
-        for (Eigen::Index i = 0; i < 3; ++i)
-            phi(i, i + 3) = tau;
-
-        Eigen::Matrix<double, 6, 1> integral;
-        integral.head(3) = 0.5 * pow(tau, 2) * um;
-        integral.tail(3) = tau * um;
-
-        state1 = phi * state0 + integral;
-    }
 
 }  // namespace fast_planner

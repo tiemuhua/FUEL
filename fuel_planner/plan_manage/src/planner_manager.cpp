@@ -117,13 +117,11 @@ namespace fast_planner {
         Eigen::MatrixXd coef_shot;
         bool is_shot_succ;
 
-        const double time_start = -1.0;
-
-        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, time_start,
+        int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel,
                                                true, path, is_shot_succ, coef_shot, shot_time);
         if (status == KinodynamicAstar::NO_PATH) {
             ROS_ERROR("search 1 fail");
-            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, time_start,
+            status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel,
                                                false, path, is_shot_succ, coef_shot, shot_time);
             if (status == KinodynamicAstar::NO_PATH) {
                 cout << "[Kino replan]: Can't find path." << endl;
@@ -162,6 +160,8 @@ namespace fast_planner {
 
         cout << "start\t"<<start_pt.transpose()<<endl;
         cout << "astar\t"<<path[0]->state.head(3).transpose()<<endl;
+        cout << "sample\t"<<point_set[0].transpose()<<endl;
+        cout << "init\t"<<init_bspline.evaluateDeBoorT(0).transpose()<<endl;
         cout << "final\t"<<local_data_->pos_traj_.evaluateDeBoorT(0).transpose()<<endl;
 
         return true;

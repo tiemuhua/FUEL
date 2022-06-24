@@ -93,10 +93,6 @@ namespace fast_planner {
 
         double estimateHeuristic(const Eigen::VectorXd &x1, const Eigen::VectorXd &x2, double &optimal_time) const;
 
-        /* state propagation */
-        static void stateTransit(Eigen::Matrix<double, 6, 1> &state0, Eigen::Matrix<double, 6, 1> &state1,
-                                 const Eigen::Vector3d &um, double tau);
-
     public:
         KinodynamicAstar(ros::NodeHandle &nh, const EDTEnvironment::Ptr &env);
 
@@ -106,8 +102,7 @@ namespace fast_planner {
 
         /* main API */
         int search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
-                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
-                   double time_start, bool init_search,
+                   const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, bool init_search,
                    vector<PathNodePtr> &path, bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);
 
         static void getSamples(const vector<PathNodePtr> &path, const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
