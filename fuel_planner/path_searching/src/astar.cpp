@@ -100,7 +100,7 @@ namespace fast_planner {
                             }
                         } else if (pro_node->node_state == IN_OPEN_SET) {
                             if (tmp_g_score < pro_node->g_score) {
-                                // pro_node->index = pro_id;
+                                // pro_node->discretized_state = pro_id;
                                 pro_node->position = pro_pos;
                                 pro_node->f_score = tmp_f_score;
                                 pro_node->g_score = tmp_g_score;

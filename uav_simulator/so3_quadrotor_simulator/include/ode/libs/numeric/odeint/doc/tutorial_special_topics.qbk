@@ -233,7 +233,7 @@ adjust it's internal storage accordingly.
 We show this for a Hamiltonian system of nonlinear, disordered oscillators with nonlinear nearest neighbor coupling.
 
 The system function is implemented in terms of a class that also provides functions for calculating the energy.
-Note, that this class stores the random potential internally which is not resized, but rather a start index is kept which should be changed whenever the states' size change.
+Note, that this class stores the random potential internally which is not resized, but rather a start discretized_state is kept which should be changed whenever the states' size change.
 
 [resizing_lattice_system_class]
 
@@ -243,7 +243,7 @@ The total size we allow is 1024 and we start with an initial state size of 60.
 
 The lattice gets resized whenever the energy distribution comes close to the borders `distr[10] > 1E-150`, `distr[distr.size()-10] > 1E-150`.
 If we increase to the left, `q` and `p` have to be rotated because their resize function always appends at the end.
-Additionally, the start index of the potential changes in this case.
+Additionally, the start discretized_state of the potential changes in this case.
 
 [resizing_lattice_steps_loop]
 

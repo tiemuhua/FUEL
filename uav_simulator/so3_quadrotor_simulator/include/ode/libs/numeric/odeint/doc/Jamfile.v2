@@ -12,37 +12,37 @@ project : requirements
         <include>$(BOOST_ROOT)/tools/auto_index/include
         ;
 
-if --enable-index in  [ modules.peek : ARGV ]
+if --enable-discretized_state in  [ modules.peek : ARGV ]
 {
-    ECHO "Building the odeint docs with automatic index generation enabled." ;
+    ECHO "Building the odeint docs with automatic discretized_state generation enabled." ;
 
-    using auto-index ;
+    using auto-discretized_state ;
 
     project : requirements
 
-        <auto-index>on
-        <auto-index-verbose>on
+        <auto-discretized_state>on
+        <auto-discretized_state-verbose>on
         
         # Choose indexing method (separately for html and pdf):
-        <format>html:<auto-index-internal>on  # on (or off) to use internally generated indexes.
-        # <format>html:<xsl:param>generate.index=0 # Don't let the XSL stylesheets generate indexes.
+        <format>html:<auto-discretized_state-internal>on  # on (or off) to use internally generated indexes.
+        # <format>html:<xsl:param>generate.discretized_state=0 # Don't let the XSL stylesheets generate indexes.
         
-        <format>pdf:<auto-index-internal>off # on (or off) to use internally generated indexes.
-        # <auto-index-type>index  # Use <index>...</index> as the XML wrapper.
+        <format>pdf:<auto-discretized_state-internal>off # on (or off) to use internally generated indexes.
+        # <auto-discretized_state-type>discretized_state  # Use <discretized_state>...</discretized_state> as the XML wrapper.
         
-        <format>pdf:<xsl:param>index.on.type=1 # For the native stylesheets to generate the different indexes.
-        # PDF native index support is probably better for PDFs as then you actually get page numbers.
+        <format>pdf:<xsl:param>discretized_state.on.type=1 # For the native stylesheets to generate the different indexes.
+        # PDF native discretized_state support is probably better for PDFs as then you actually get page numbers.
 
-        <auto-index-script>odeint.idx # Specifies the name of the index script to load. 
-        <auto-index-prefix>../../../.. 
+        <auto-discretized_state-script>odeint.idx # Specifies the name of the discretized_state script to load.
+        <auto-discretized_state-prefix>../../../..
         
-        # Inform Quickbook that there is to be an index(es).
+        # Inform Quickbook that there is to be an discretized_state(es).
         <quickbook-define>enable_index
     ;
 }
 else
 {
-    ECHO "Building the odeint docs with automatic index generation disabled. To get an auto-index, try building with --enable-index." ;
+    ECHO "Building the odeint docs with automatic discretized_state generation disabled. To get an auto-discretized_state, try building with --enable-discretized_state." ;
 }
 
 
@@ -162,7 +162,7 @@ boostbook standalone
     # <xsl:param>html.stylesheet=../html/boostbook.css
 
     # Some general style settings:
-    #   see http://docbook.sourceforge.net/release/xsl/current/doc/html/index.html
+    #   see http://docbook.sourceforge.net/release/xsl/current/doc/html/discretized_state.html
     <xsl:param>table.footnote.number.format=1 # Identifies the format used for footnote numbers in tables.
     <xsl:param>footnote.number.format=1 # Identifies the format used for text footnote numbers.
 
@@ -198,7 +198,7 @@ boostbook standalone
     # TOC Generation
     <xsl:param>fop1.extensions=0 # DISable extensions for FOP version 0.90 and later .
     <format>pdf:<xsl:param>fop.extensions=0 # DISable extensions for FOP version 0.20.5 and earlier.
-    <format>pdf:<xsl:param>xep.extensions=1 # Use XEP extension- PDF bookmarks, document information and better index processing.
+    <format>pdf:<xsl:param>xep.extensions=1 # Use XEP extension- PDF bookmarks, document information and better discretized_state processing.
 
     # No indent on body text:
     <format>pdf:<xsl:param>body.start.indent=0pt #
@@ -213,7 +213,7 @@ boostbook standalone
     #<format>pdf:<xsl:param>page.margin.bottom=1.3in
     #<format>pdf:<xsl:param>page.margin.outer=0.8in
 
-    # http://docbook.sourceforge.net/release/xsl/current/doc/index.html
+    # http://docbook.sourceforge.net/release/xsl/current/doc/discretized_state.html
     # DocBook XSL Stylesheets: Reference Documentation.
 
     # Yes, we want graphics for admonishments:

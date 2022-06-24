@@ -113,7 +113,7 @@ The next example is a large, one-dimensional chain of nearest-neighbor coupled p
 ['d __phi[subl k] / dt = __omega[subl k] + sin( __phi[subl k+1] - __phi[subl k] ) + sin( __phi[subl k] - __phi[subl k-1])]
 
 In principle we can use all the techniques from the previous phase oscillator ensemble example, but we have to take special care about the coupling of the oscillators. To efficiently implement the coupling you can use a very elegant way employing Thrust's permutation iterator. A permutation iterator behaves like a normal iterator on a vector but it does not iterate along the usual order of the elements.
-It rather iterates along some permutation of the elements defined by some index map. To realize the nearest neighbor coupling we create one permutation iterator which travels one step behind a usual iterator and another permutation iterator which travels one step in front. The full system class is:
+It rather iterates along some permutation of the elements defined by some discretized_state map. To realize the nearest neighbor coupling we create one permutation iterator which travels one step behind a usual iterator and another permutation iterator which travels one step in front. The full system class is:
 
 [thrust_phase_chain_system]
 

@@ -307,9 +307,6 @@ void cmdCallback(const ros::TimerEvent &e) {
         double dt = (time_now - last_time).toSec();
         energy += jer.squaredNorm() * dt;
     }
-    if (!traj_cmd_.empty()){
-        cout << "pos - traj_cmd_.back()).norm()\t"<<(pos - traj_cmd_.back()).norm()<<endl;
-    }
     traj_cmd_.push_back(pos);
     last_time = time_now;
 }

@@ -883,7 +883,7 @@ static tour *blue, *red;
 static unsigned int n; // size of the tours 
 static int **M_neigh;  // neighbourhood matrix: first collumn indicates the
                        // number of neighbours, and the collumns 2 and 3
-                       // indicate the index of the neighbours
+                       // indicate the discretized_state of the neighbours
 static int **M_neigh2; // neighbourhood matrix: the collumns indicate the
                        // number of i conections to the neighbours indicated
                        // in collumns 2 and 3
@@ -1628,7 +1628,7 @@ GainType off_gen(int *sol_blue, int *sol_red, int *offspring,
     }
 
     // Generating the offspring     
-    // index for the solutions
+    // discretized_state for the solutions
     sol_blue_index = new_int(n);
     sol_red_index = new_int(n);
     for (i = 0; i < n; i++) {

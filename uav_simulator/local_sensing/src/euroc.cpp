@@ -186,7 +186,7 @@ void image_pose_callback(const sensor_msgs::ImageConstPtr& image_input,
       min_time_index = i;
     }
   }
-  printf("min time diff index %d, with diff time %lf ms.\n", min_time_index, min_time_diff * 1000.0f);
+  printf("min time diff discretized_state %d, with diff time %lf ms.\n", min_time_index, min_time_diff * 1000.0f);
   Pose_receive = gt_pose_vect[min_time_index].pose;
 
   // convert to body pose

@@ -31,8 +31,8 @@ ISBN
 ISSN
 IBM
 italic \<italic\w*\>
-# index index and indexes (assume not using plural indices!)
-index  \<index\w*\>
+# discretized_state discretized_state and indexes (assume not using plural indices!)
+discretized_state  \<discretized_state\w*\>
 Luhn
 Mastercard
 modulus

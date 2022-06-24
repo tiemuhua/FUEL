@@ -1922,7 +1922,7 @@ private:
       return r;
     }
 
-    // Get the index to the string section
+    // Get the discretized_state to the string section
     size_t shdrstrndx = 0;
     if (elf_getshdrstrndx(elf_handle.get(), &shdrstrndx) == -1) {
       return r;
@@ -2072,10 +2072,10 @@ private:
     // As libdwarf allocates a copy of everything, let's get the contents
     // of the line section and keep it around. We also create a map of
     // program counter to line table indices so we can search by address
-    // and get the line buffer index.
+    // and get the line buffer discretized_state.
     //
     // To make things more difficult, the same address can span more than
-    // one line, so we need to keep the index pointing to the first line
+    // one line, so we need to keep the discretized_state pointing to the first line
     // by using insert instead of the map's [ operator.
 
     // Get the line context for the DIE

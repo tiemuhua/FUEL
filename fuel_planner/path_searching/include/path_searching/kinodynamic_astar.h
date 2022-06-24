@@ -24,11 +24,12 @@ namespace fast_planner {
 #define inf 1 >> 30
 
     typedef Eigen::Matrix<double, 6, 1> Vector6d;
+    typedef Eigen::Matrix<int, 6, 1> Vector6i;
 
     class PathNode {
     public:
         /* -------------------- */
-        Eigen::Vector3i index;
+        Vector6i discretized_state;
         Eigen::Matrix<double, 6, 1> state;
         double g_score{}, f_score{};
         Eigen::Vector3d input;
@@ -42,14 +43,14 @@ namespace fast_planner {
             input = Eigen::Vector3d::Zero();
         }
 
-        PathNode(Eigen::Vector3i index_,
+        PathNode(Vector6i index_,
                  Vector6d state_,
                  double g_score_,
                  double f_score_,
                  Eigen::Vector3d input_,
                  double duration_,
                  shared_ptr<PathNode> parent_) {
-            index = std::move(index_);
+            discretized_state = std::move(index_);
             state = std::move(state_);
             g_score = g_score_;
             f_score = f_score_;
@@ -128,7 +129,7 @@ namespace fast_planner {
         double time_origin_{};
 
         /* helper */
-        Eigen::Vector3i posToIndex(const Eigen::Vector3d &pt);
+        Vector6i discretizeState(const Vector6d &state);
 
         int timeToIndex(double time) const;
 

@@ -40,12 +40,12 @@ namespace fast_planner {
     }
 
 
-    struct Vector3iHash {
-        size_t operator()(const Eigen::Vector3i &vec) const {
+    struct EigenVectorHash {
+        size_t operator()(const Eigen::VectorXi &vec) const {
             std::size_t seed = 0;
-            seed ^= vec(0) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-            seed ^= vec(1) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-            seed ^= vec(2) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            for (int i = 0; i < vec.rows(); ++i) {
+                seed ^= vec(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
             return seed;
         }
     };
@@ -58,23 +58,22 @@ namespace fast_planner {
         cur_node->parent = nullptr;
         cur_node->state.head(3) = start_pt;
         cur_node->state.tail(3) = start_v;
-        cur_node->index = posToIndex(start_pt);
+        cur_node->discretized_state = discretizeState(cur_node->state);
         cur_node->g_score = 0.0;
 
         Eigen::VectorXd end_state(6);
         end_state.head(3) = end_pt;
         end_state.tail(3) = end_v;
-        Eigen::Vector3i end_index = posToIndex(end_pt);
+        Eigen::Vector3i end_index = discretizeState(end_state).head(3);
         double time_to_goal;
         cur_node->f_score = lambda_heu_ * estimateHeuristic(cur_node->state, end_state, time_to_goal);
-        std::unordered_set<Eigen::Vector3i, Vector3iHash> visited_ids;
+        std::unordered_set<Vector6i, EigenVectorHash> visited_ids;
         std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> que;
         que.push(cur_node);
 
         int use_node_num = 1, iter_num = 0;
 
         double res = 1 / 2.0, time_res = 1 / 1.0, time_res_init = 1 / 20.0;
-        Eigen::Matrix<double, 6, 1> cur_state = cur_node->state;
         vector<Eigen::Vector3d> inputs;
         vector<double> durations;
         if (init_search) {
@@ -95,20 +94,20 @@ namespace fast_planner {
             cur_node = que.top();
             que.pop();
             Eigen::Vector3d cur_pos = cur_node->state.head(3);
-            Eigen::Vector3i cur_id = posToIndex(cur_pos);
-            if (visited_ids.count(cur_id)) {
+            Eigen::Matrix<double, 6, 1> cur_state = cur_node->state;
+            if (visited_ids.count(cur_node->discretized_state)) {
                 continue;
             } else {
-                visited_ids.insert(cur_id);
+                visited_ids.insert(cur_node->discretized_state);
             }
             iter_num += 1;
 
             // Terminate?
             bool reach_horizon = (cur_pos - start_pt).norm() >= horizon_;
             const int tolerance = ceil(1 / resolution_);
-            bool near_end = abs(cur_node->index(0) - end_index(0)) <= tolerance &&
-                            abs(cur_node->index(1) - end_index(1)) <= tolerance &&
-                            abs(cur_node->index(2) - end_index(2)) <= tolerance;
+            bool near_end = abs(cur_node->discretized_state(0) - end_index(0)) <= tolerance &&
+                            abs(cur_node->discretized_state(1) - end_index(1)) <= tolerance &&
+                            abs(cur_node->discretized_state(2) - end_index(2)) <= tolerance;
             if (reach_horizon || near_end) {
                 path = move(retrievePath(cur_node));
             }
@@ -142,8 +141,8 @@ namespace fast_planner {
                     if (!edt_environment_->sdf_map_->isInBox(pro_pos)) { continue; }
 
                     // Check if visited
-                    Eigen::Vector3i pro_id = posToIndex(pro_pos);
-                    if (visited_ids.count(pro_id)) { continue; }
+                    Vector6i pro_discretized_state = discretizeState(pro_state);
+                    if (visited_ids.count(pro_discretized_state)) { continue; }
 
                     // Check maximal velocity
                     Eigen::Vector3d pro_v = pro_state.tail(3);
@@ -152,7 +151,7 @@ namespace fast_planner {
                     }
 
                     // Check not in the same voxel
-                    Eigen::Vector3i diff = pro_id - cur_node->index;
+                    Vector6i diff = pro_discretized_state - cur_node->discretized_state;
                     if (diff.norm() == 0) { continue; }
 
                     // Check safety
@@ -173,11 +172,12 @@ namespace fast_planner {
                         }
                     }
                     if (is_occ) { continue; }
+                    cout << "pro state push\t" << pro_state.transpose() << endl;
 
                     double tmp_time_to_goal;
                     double tmp_g_score = (input.squaredNorm() + w_time_) * tau + cur_node->g_score;
                     double tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, tmp_time_to_goal);
-                    auto pro_node = std::make_shared<PathNode>(pro_id, pro_state, tmp_g_score, tmp_f_score, input, tau, cur_node);
+                    auto pro_node = std::make_shared<PathNode>(pro_discretized_state, pro_state, tmp_g_score, tmp_f_score, input, tau, cur_node);
                     que.push(pro_node);
 
                     use_node_num++;
@@ -479,9 +479,12 @@ namespace fast_planner {
         start_end_derivatives.push_back(end_acc);
     }
 
-    Eigen::Vector3i KinodynamicAstar::posToIndex(const Eigen::Vector3d &pt) {
-        Vector3i idx = ((pt - origin_) / resolution_).array().floor().cast<int>();
-        return idx;
+    Vector6i KinodynamicAstar::discretizeState(const Vector6d &state) {
+        Vector3i idx = ((state.head(3) - origin_) / resolution_).array().floor().cast<int>();
+        Vector6i discretized_state;
+        discretized_state.head(3)=idx;
+        discretized_state.tail(3)=(state.tail(3)/resolution_).array().floor().cast<int>();
+        return discretized_state;
     }
 
     int KinodynamicAstar::timeToIndex(double time) const {

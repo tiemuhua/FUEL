@@ -484,7 +484,7 @@ private:
       m_algebra.for_each2(m_diffs[0][j].m_v, m_derivs[j][m].m_v,
                           typename operations_type::template scale_sum1<value_type>(fac));
     } else {
-      // calculate the index of m_diffs for this kappa-j-combination
+      // calculate the discretized_state of m_diffs for this kappa-j-combination
       const int j_diffs = j - kappa / 2;
 
       m_algebra.for_each2(m_diffs[kappa][j_diffs].m_v, m_derivs[j][m + kappa].m_v,
