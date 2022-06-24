@@ -12,7 +12,6 @@
 #include "plan_env/edt_environment.h"
 #include <boost/functional/hash.hpp>
 #include <queue>
-#include <path_searching/matrix_hash.h>
 
 namespace fast_planner {
 // #define REACH_HORIZON 1
@@ -66,47 +65,6 @@ namespace fast_planner {
 
     typedef shared_ptr<PathNode> PathNodePtr;
 
-    class NodeComparator {
-    public:
-        bool operator()(const PathNodePtr &node1, const PathNodePtr &node2) {
-            return node1->f_score > node2->f_score;
-        }
-    };
-
-    class NodeHashTable {
-    private:
-        /* data */
-        std::unordered_map<Eigen::Vector3i, PathNodePtr, matrix_hash<Eigen::Vector3i>> data_3d_;
-        std::unordered_map<Eigen::Vector4i, PathNodePtr, matrix_hash<Eigen::Vector4i>> data_4d_;
-
-    public:
-        NodeHashTable(/* args */) = default;
-
-        ~NodeHashTable() = default;
-
-        void insert(const Eigen::Vector3i &idx, const PathNodePtr &node) {
-            data_3d_.insert(std::make_pair(idx, node));
-        }
-
-        void insert(Eigen::Vector3i idx, int time_idx, const PathNodePtr &node) {
-            data_4d_.insert(std::make_pair(Eigen::Vector4i(idx(0), idx(1), idx(2), time_idx), node));
-        }
-
-        PathNodePtr find(const Eigen::Vector3i &idx) {
-            auto iter = data_3d_.find(idx);
-            return iter == data_3d_.end() ? nullptr : iter->second;
-        }
-
-        PathNodePtr find(Eigen::Vector3i idx, int time_idx) {
-            auto iter = data_4d_.find(Eigen::Vector4i(idx(0), idx(1), idx(2), time_idx));
-            return iter == data_4d_.end() ? nullptr : iter->second;
-        }
-
-        void clear() {
-            data_3d_.clear();
-            data_4d_.clear();
-        }
-    };
 
     class KinodynamicAstar {
     private:

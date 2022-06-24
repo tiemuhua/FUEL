@@ -4,6 +4,7 @@
 #include <plan_env/sdf_map.h>
 #include <unordered_set>
 #include <../../plan_manage/include/plan_manage/backward.hpp>
+#include <path_searching/matrix_hash.h>
 
 namespace backward {
     backward::SignalHandling sh;
@@ -39,14 +40,10 @@ namespace fast_planner {
         cout << "kino map size: " << map_size_3d_.transpose() << endl;
     }
 
-
-    struct EigenVectorHash {
-        size_t operator()(const Eigen::VectorXi &vec) const {
-            std::size_t seed = 0;
-            for (int i = 0; i < vec.rows(); ++i) {
-                seed ^= vec(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-            }
-            return seed;
+    class NodeComparator {
+    public:
+        bool operator()(const PathNodePtr &node1, const PathNodePtr &node2) {
+            return node1->f_score > node2->f_score;
         }
     };
 
@@ -67,7 +64,7 @@ namespace fast_planner {
         Eigen::Vector3i end_index = discretizeState(end_state).head(3);
         double time_to_goal;
         cur_node->f_score = lambda_heu_ * estimateHeuristic(cur_node->state, end_state, time_to_goal);
-        std::unordered_set<Vector6i, EigenVectorHash> visited_ids;
+        std::unordered_set<Vector6i, matrix_hash<Vector6i>> visited_ids;
         std::priority_queue<PathNodePtr, std::vector<PathNodePtr>, NodeComparator> que;
         que.push(cur_node);
 
@@ -416,7 +413,7 @@ namespace fast_planner {
         int seg_num = floor(sum_t / ts);
         seg_num = max(8, seg_num);
         ts = sum_t / seg_num;
-        double t_from_pre_node = ts;
+        double t_from_pre_node = 0;
 
         for (const PathNodePtr &node: path) {
             Eigen::Matrix<double, 6, 1> x0 = node->state, xt;
