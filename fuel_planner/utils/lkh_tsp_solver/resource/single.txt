@@ -1,15 +1,10 @@
-NAME : single.1100.tour
-COMMENT : Length = 1100
-COMMENT : Found by LKH [Keld Helsgaun] Fri Jun 24 20:21:30 2022
+NAME : single.300.tour
+COMMENT : Length = 300
+COMMENT : Found by LKH [Keld Helsgaun] Tue Jul 12 01:51:56 2022
 TYPE : TOUR
-DIMENSION : 8
+DIMENSION : 3
 TOUR_SECTION
 1
-5
-6
-8
-7
-4
 3
 2
 -1

@@ -187,8 +187,13 @@ namespace fast_planner {
         } else {
             // Search kino path to exactly next viewpoint and optimize
             cout << "\n\n\n\n\n\n\n\n0000000000000000000000000\n0000000000000000000000000\n\n\n\n\n\n";
-            if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
-                return FAIL;
+            try {
+                if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
+                    return FAIL;
+            }
+            catch (error_t) {
+                
+            }
         }
 
         if (planner_manager_->local_data_->pos_traj_.getTimeSum() < time_lb - 0.1)
@@ -197,7 +202,7 @@ namespace fast_planner {
         LocalTrajDataPtr local_traj_data = planner_manager_->local_data_;
         local_traj_data->duration_ = local_traj_data->pos_traj_.getTimeSum();
         planner_manager_->planYawExplore(cur_yaw, next_yaw, local_traj_data->pos_traj_,
-                                         local_traj_data->duration_, true, ep_->relax_time_);
+                                         local_traj_data->duration_, ep_->relax_time_);
 
         local_traj_data->culcDerivatives();
         local_traj_data->start_time_ = ros::Time::now();

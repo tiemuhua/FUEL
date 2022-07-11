@@ -36,12 +36,11 @@ namespace fast_planner {
                              const Eigen::Vector3d &cur_acc, const double &time_lb = -1);
 
         void planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw,
-                            const NonUniformBspline &pos_traj, double duration,
-                            bool lookfwd, const double &relax_time);
+                            const NonUniformBspline &pos_traj, double duration, const double &relax_time);
 
         bool checkTrajCollision(double &distance);
 
-        static void calcNextYaw(const double &last_yaw, double &yaw);
+        static void roundYaw(const double &last_yaw, double &yaw);
 
         PlanParameters pp_;
         LocalTrajDataPtr local_data_;

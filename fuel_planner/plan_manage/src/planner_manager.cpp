@@ -114,7 +114,7 @@ namespace fast_planner {
          ******************************/
         vector<PathNodePtr> path;
         double shot_time;
-        Eigen::MatrixXd coef_shot;
+        Matrix34 coef_shot;
         bool is_shot_succ;
 
         int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel,
@@ -151,18 +151,6 @@ namespace fast_planner {
         if (time_lb > 0) pos_traj_bspline_optimizer->setTimeLowerBound(time_lb);
         pos_traj_bspline_optimizer->optimize(ctrl_pts, ts, cost_function, 1, 1);
         local_data_->pos_traj_.setUniformBspline(ctrl_pts, pp_.bspline_degree_, ts);
-
-        vector<Eigen::Vector3d> start2, end2;
-        local_data_->pos_traj_.getBoundaryStates(2, 0, start2, end2);
-        std::cout << "State error: (" << (start2[0] - start[0]).norm() << ", "
-                  << (start2[1] - start[1]).norm() << ", " << (start2[2] - start[2]).norm() << ")"
-                  << std::endl;
-
-        cout << "start\t"<<start_pt.transpose()<<endl;
-        cout << "astar\t"<<path[0]->state.head(3).transpose()<<endl;
-        cout << "sample\t"<<point_set[0].transpose()<<endl;
-        cout << "init\t"<<init_bspline.evaluateDeBoorT(0).transpose()<<endl;
-        cout << "final\t"<<local_data_->pos_traj_.evaluateDeBoorT(0).transpose()<<endl;
 
         return true;
     }
@@ -220,7 +208,7 @@ namespace fast_planner {
 
     void FastPlannerManager::planYawExplore(const Eigen::Vector3d &start_yaw, const double &end_yaw,
                                             const NonUniformBspline &pos_traj, const double duration,
-                                            bool lookfwd, const double &relax_time) {
+                                            const double &relax_time) {
         const int seg_num = 12;
         double dt_yaw = duration / seg_num;  // time of B-spline segment
         Eigen::Vector3d start_yaw3d = start_yaw;
@@ -237,39 +225,38 @@ namespace fast_planner {
 
         // Initial state
         Eigen::Matrix3d states2pts;
-        states2pts << 1.0, -dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw, 1.0, 0.0, -(1 / 6.0) * dt_yaw * dt_yaw,
+        states2pts << 1.0, -dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw,
+                1.0, 0.0, -(1 / 6.0) * dt_yaw * dt_yaw,
                 1.0, dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw;
         yaw.block<3, 1>(0, 0) = states2pts * start_yaw3d;
 
-        // Add waypoint constraints if look forward is enabled
+        // Add waypoint constraints if looking forward is enabled
         vector<Eigen::Vector3d> waypts;
         vector<int> waypt_idx;
-        if (lookfwd) {
-            const double forward_t = 2.0;
-            const int relax_num = relax_time / dt_yaw;
-            for (int i = 1; i < seg_num - relax_num; ++i) {
-                double tc = i * dt_yaw;
-                Eigen::Vector3d pc = pos_traj.evaluateDeBoorT(tc);
-                double tf = min(duration, tc + forward_t);
-                Eigen::Vector3d pf = pos_traj.evaluateDeBoorT(tf);
-                Eigen::Vector3d pd = pf - pc;
-                Eigen::Vector3d waypt;
-                if (pd.norm() > 1e-6) {
-                    waypt(0) = atan2(pd(1), pd(0));
-                    waypt(1) = waypt(2) = 0.0;
-                    calcNextYaw(last_yaw, waypt(0));
-                } else
-                    waypt = waypts.back();
+        const double forward_t = 2.0;
+        const int relax_num = relax_time / dt_yaw;
+        for (int i = 1; i < seg_num - relax_num; ++i) {
+            double tc = i * dt_yaw;
+            Eigen::Vector3d pc = pos_traj.evaluateDeBoorT(tc);
+            double tf = min(duration, tc + forward_t);
+            Eigen::Vector3d pf = pos_traj.evaluateDeBoorT(tf);
+            Eigen::Vector3d pd = pf - pc;
+            Eigen::Vector3d waypt;
+            if (pd.norm() > 1e-6) {
+                waypt(0) = atan2(pd(1), pd(0));
+                waypt(1) = waypt(2) = 0.0;
+                roundYaw(last_yaw, waypt(0));
+            } else
+                waypt = waypts.back();
 
-                last_yaw = waypt(0);
-                waypts.push_back(waypt);
-                waypt_idx.push_back(i);
-            }
+            last_yaw = waypt(0);
+            waypts.push_back(waypt);
+            waypt_idx.push_back(i);
         }
 
         // Final state
         Eigen::Vector3d end_yaw3d(end_yaw, 0, 0);
-        calcNextYaw(last_yaw, end_yaw3d(0));
+        roundYaw(last_yaw, end_yaw3d(0));
         yaw.block<3, 1>(seg_num, 0) = states2pts * end_yaw3d;
 
         // Debug rapid change of yaw
@@ -279,8 +266,8 @@ namespace fast_planner {
         }
 
         // Call B-spline optimization solver
-        int cost_func = BsplineOptimizer::SMOOTHNESS | BsplineOptimizer::START | BsplineOptimizer::END |
-                        BsplineOptimizer::WAYPOINTS;
+        int cost_func = BsplineOptimizer::SMOOTHNESS | BsplineOptimizer::START |
+                        BsplineOptimizer::END | BsplineOptimizer::WAYPOINTS;
         vector<Eigen::Vector3d> start = {Eigen::Vector3d(start_yaw3d[0], 0, 0),
                                          Eigen::Vector3d(start_yaw3d[1], 0, 0), Eigen::Vector3d(start_yaw3d[2], 0, 0)};
         vector<Eigen::Vector3d> end = {Eigen::Vector3d(end_yaw3d[0], 0, 0), Eigen::Vector3d(0, 0, 0)};
@@ -292,23 +279,12 @@ namespace fast_planner {
         local_data_->yaw_traj_.setUniformBspline(yaw, 3, dt_yaw);
     }
 
-    void FastPlannerManager::calcNextYaw(const double &last_yaw, double &yaw) {
-        // round yaw to [-PI, PI]
-        double round_last = last_yaw;
-        while (round_last < -M_PI) {
-            round_last += 2 * M_PI;
+    void FastPlannerManager::roundYaw(const double &last_yaw, double &yaw) {
+        while (yaw - last_yaw > M_PI) {
+            yaw -= 2 * M_PI;
         }
-        while (round_last > M_PI) {
-            round_last -= 2 * M_PI;
-        }
-
-        double diff = yaw - round_last;
-        if (fabs(diff) <= M_PI) {
-            yaw = last_yaw + diff;
-        } else if (diff > M_PI) {
-            yaw = last_yaw + diff - 2 * M_PI;
-        } else if (diff < -M_PI) {
-            yaw = last_yaw + diff + 2 * M_PI;
+        while (yaw - last_yaw < -M_PI) {
+            yaw += 2 * M_PI;
         }
     }
 

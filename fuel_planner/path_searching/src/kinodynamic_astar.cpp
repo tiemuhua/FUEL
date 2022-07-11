@@ -62,7 +62,7 @@ namespace fast_planner {
     int KinodynamicAstar::search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
                                  const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v,
                                  const bool init_search, vector<PathNodePtr> &path,
-                                 bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time) {
+                                 bool &is_shot_succ, Matrix34 &coef_shot, double &shot_time) {
         PathNodePtr cur_node = make_shared<PathNode>();
         cur_node->parent = nullptr;
         cur_node->state.head(3) = start_pt;
@@ -250,7 +250,7 @@ namespace fast_planner {
 
     bool KinodynamicAstar::computeShotTraj(const Eigen::VectorXd &state1, const Eigen::VectorXd &state2,
                                            const double time_to_goal,
-                                           Eigen::MatrixXd &coef_shot) {
+                                           Matrix34 &coef_shot) {
         /* ---------- get coefficient ---------- */
         const Vector3d p0 = state1.head(3);
         const Vector3d dp = state2.head(3) - p0;
@@ -374,7 +374,7 @@ namespace fast_planner {
 
     void KinodynamicAstar::getSamples(const vector<PathNodePtr> &path,
                                       const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
-                                      const bool is_shot_succ, const Eigen::MatrixXd &coef_shot, const double t_shot,
+                                      const bool is_shot_succ, const Matrix34 &coef_shot, const double t_shot,
                                       double &ts, vector<Eigen::Vector3d> &point_set,
                                       vector<Eigen::Vector3d> &start_end_derivatives) {
         /* ---------- path duration ---------- */
@@ -392,11 +392,9 @@ namespace fast_planner {
         double t_from_pre_node = 0;
 
         for (const PathNodePtr &node: path) {
-            cout << node->state.head(3).transpose() << endl;
             while (t_from_pre_node < node->duration) {
                 Vector6d xt = stateTransit(node->state, node->input, t_from_pre_node);
                 point_set.emplace_back(xt.head(3));
-                cout << "xt.head(3).transpose\t" << xt.head(3).transpose() << endl;
                 t_from_pre_node += ts;
             }
             t_from_pre_node -= node->duration;
@@ -435,9 +433,9 @@ namespace fast_planner {
 
         // calculate start acc
         Eigen::Vector3d start_acc;
-        if (path.empty()) { // no searched traj, calculate by shot traj
+        if (path.empty()) { // no searched trajectory, calculate by shot trajectory
             start_acc = 2 * coef_shot.col(2);
-        } else { // input of searched traj
+        } else { // input of searched trajectory
             start_acc = path.front()->input;
         }
 

@@ -57,6 +57,7 @@ namespace fast_planner {
 
     typedef shared_ptr<PathNode> PathNodePtr;
 
+    typedef Eigen::Matrix<double,3,4> Matrix34;
 
     class KinodynamicAstar {
     private:
@@ -89,7 +90,7 @@ namespace fast_planner {
         static vector<double> quartic(double a, double b, double c, double d, double e);
 
         bool computeShotTraj(const Eigen::VectorXd &state1, const Eigen::VectorXd &state2, double time_to_goal,
-                             Eigen::MatrixXd &coef_shot);
+                             Matrix34 &coef_shot);
 
         double estimateHeuristic(const Eigen::VectorXd &x1, const Eigen::VectorXd &x2, double &optimal_time) const;
 
@@ -103,10 +104,10 @@ namespace fast_planner {
         /* main API */
         int search(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &start_v, const Eigen::Vector3d &start_a,
                    const Eigen::Vector3d &end_pt, const Eigen::Vector3d &end_v, bool init_search,
-                   vector<PathNodePtr> &path, bool &is_shot_succ, Eigen::MatrixXd &coef_shot, double &shot_time);
+                   vector<PathNodePtr> &path, bool &is_shot_succ, Matrix34 &coef_shot, double &shot_time);
 
         static void getSamples(const vector<PathNodePtr> &path, const Eigen::Vector3d &start_v, const Eigen::Vector3d &end_v,
-                               bool is_shot_succ, const Eigen::MatrixXd &coef_shot, double t_shot,
+                               bool is_shot_succ, const Matrix34 &coef_shot, double t_shot,
                                double &ts, vector<Eigen::Vector3d> &point_set, vector<Eigen::Vector3d> &start_end_derivatives);
 
         typedef shared_ptr<KinodynamicAstar> Ptr;
