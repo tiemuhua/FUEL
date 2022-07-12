@@ -242,7 +242,7 @@ namespace fast_planner {
             Eigen::Vector3d pf = pos_traj.evaluateDeBoorT(tf);
             Eigen::Vector3d pd = pf - pc;
             Eigen::Vector3d waypt;
-            if (pd.norm() > 1e-6) {
+            if (pd.norm() > 1e-3) {
                 waypt(0) = atan2(pd(1), pd(0));
                 waypt(1) = waypt(2) = 0.0;
                 roundYaw(last_yaw, waypt(0));

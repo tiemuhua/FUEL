@@ -257,7 +257,7 @@ namespace fast_planner {
         const Vector3d v0 = state1.segment(3, 3);
         const Vector3d v1 = state2.segment(3, 3);
         const Vector3d dv = v1 - v0;
-        coef_shot = MatrixXd::Zero(3, 4);
+        coef_shot = Matrix34::Zero();
 
         Vector3d a = 1.0 / 6.0 * (-12.0 / (time_to_goal * time_to_goal * time_to_goal) * (dp - v0 * time_to_goal) +
                                   6 / (time_to_goal * time_to_goal) * dv);

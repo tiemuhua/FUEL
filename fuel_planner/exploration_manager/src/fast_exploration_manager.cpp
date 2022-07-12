@@ -187,13 +187,8 @@ namespace fast_planner {
         } else {
             // Search kino path to exactly next viewpoint and optimize
             cout << "\n\n\n\n\n\n\n\n0000000000000000000000000\n0000000000000000000000000\n\n\n\n\n\n";
-            try {
-                if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
-                    return FAIL;
-            }
-            catch (error_t) {
-                
-            }
+            if (!planner_manager_->kinodynamicReplan(cur_pos, cur_vel, cur_acc, next_pos, Vector3d(0, 0, 0), time_lb))
+                return FAIL;
         }
 
         if (planner_manager_->local_data_->pos_traj_.getTimeSum() < time_lb - 0.1)
